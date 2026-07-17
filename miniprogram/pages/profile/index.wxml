@@ -1,0 +1,38 @@
+<view class="page-shell profile-page">
+  <view class="profile-hero">
+    <view class="hero-orb hero-orb--one"></view><view class="hero-orb hero-orb--two"></view>
+    <view class="profile-nav safe-top"><text>PROFILE</text><view class="setting-icon" data-name="设置" bindtap="openSetting">···</view></view>
+    <view class="identity-block">
+      <view class="avatar-rings"><view class="avatar-core">林</view></view>
+      <text class="profile-name">林间来信</text>
+      <text class="profile-bio">认真生活，也认真玩。</text>
+      <view class="identity-badges"><text>18+ 已确认</text><text>上海</text></view>
+    </view>
+  </view>
+
+  <view class="profile-content">
+    <view class="record-card glass-card">
+      <view wx:for="{{records}}" wx:key="label" class="record-item">
+        <text>{{item.value}}</text><text>{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="profile-section">
+      <view class="section-head"><view><text class="section-kicker">MY PASSPORT</text><text class="section-title">兴趣护照</text></view><text class="edit-link" bindtap="editProfile">编辑</text></view>
+      <view class="passport-card">
+        <view class="passport-mark"><view class="one-rings"></view><text>ONE / 0012</text></view>
+        <view class="tag-cloud"><text wx:for="{{tags}}" wx:key="*this">{{item}}</text></view>
+        <view class="availability"><text>通常有空</text><text>工作日晚间 · 周末下午</text></view>
+      </view>
+    </view>
+
+    <view class="profile-section menu-section">
+      <view class="menu-row" data-name="我的发起" bindtap="openSetting"><view><text class="menu-icon">◌</text><text>我的发起</text></view><text>›</text></view>
+      <view class="menu-row" data-name="收藏" bindtap="openSetting"><view><text class="menu-icon">♡</text><text>收藏的活动</text></view><text>›</text></view>
+      <view class="menu-row" data-name="隐私" bindtap="openSetting"><view><text class="menu-icon">◎</text><text>隐私与边界</text></view><text>›</text></view>
+      <view class="menu-row" data-name="安全中心" bindtap="openSetting"><view><text class="menu-icon">◇</text><text>安全中心</text></view><text>›</text></view>
+    </view>
+
+    <text class="profile-footnote">你不需要成为任何人的标准答案。</text>
+  </view>
+</view>

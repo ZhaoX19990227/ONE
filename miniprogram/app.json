@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/detail/index",
+    "pages/publish/index",
+    "pages/trips/index",
+    "pages/profile/index",
+    "pages/checkin/index",
+    "pages/search/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#FCF9F8",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#9A8E8A",
+    "selectedColor": "#F8A4A8",
+    "backgroundColor": "#FCF9F8",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "发现" },
+      { "pagePath": "pages/publish/index", "text": "发起" },
+      { "pagePath": "pages/trips/index", "text": "行程" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,14 @@
+<view class="tab-shell">
+  <view
+    wx:for="{{items}}"
+    wx:key="pagePath"
+    class="tab-item {{selected === index ? 'tab-item--active' : ''}}"
+    data-path="{{item.pagePath}}"
+    data-index="{{index}}"
+    bindtap="switchTab"
+  >
+    <view class="tab-icon">{{item.icon}}</view>
+    <text>{{item.text}}</text>
+    <view wx:if="{{selected === index}}" class="breathing-dot"></view>
+  </view>
+</view>

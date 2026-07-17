@@ -1,0 +1,18 @@
+{
+  "appid": "touristappid",
+  "projectname": "ONE",
+  "description": "ONE 兴趣搭子微信小程序",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "setting": {
+    "useCompilerPlugins": ["typescript"],
+    "es6": true,
+    "minified": true,
+    "postcss": true,
+    "urlCheck": false,
+    "coverView": true,
+    "enhance": true,
+    "showShadowRootInWxmlPanel": true
+  },
+  "condition": {}
+}

@@ -1,0 +1,108 @@
+page {
+  --one-primary: #F8A4A8;
+  --one-secondary: #7FC2C9;
+  --one-bg: #FCF9F8;
+  --one-text: #2D2A26;
+  --one-muted: #9A8E8A;
+  --one-line: rgba(154, 142, 138, 0.2);
+  --one-glass: rgba(255, 255, 255, 0.7);
+  min-height: 100%;
+  background: #FCF9F8;
+  color: #2D2A26;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "SF Pro Text", sans-serif;
+  font-weight: 400;
+  font-size: 28rpx;
+}
+
+view, text, button, input, textarea, picker, slider {
+  box-sizing: border-box;
+}
+
+button {
+  font-weight: 500;
+}
+
+button::after {
+  border: 0;
+}
+
+.page-shell {
+  position: relative;
+  min-height: 100vh;
+  padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+.ambient-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(12rpx);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.ambient-orb--pink {
+  width: 340rpx;
+  height: 340rpx;
+  top: 80rpx;
+  right: -170rpx;
+  background: #F8A4A8;
+}
+
+.ambient-orb--blue {
+  width: 280rpx;
+  height: 280rpx;
+  left: -170rpx;
+  top: 540rpx;
+  background: #7FC2C9;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 16rpx 64rpx rgba(59, 45, 44, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.one-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: linear-gradient(135deg, #F8A4A8, #E4C7C8);
+  color: #fff;
+  font-size: 30rpx;
+  box-shadow: 0 14rpx 34rpx rgba(248, 164, 168, 0.28);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.one-button:active {
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+.one-rings {
+  position: relative;
+  width: 88rpx;
+  height: 52rpx;
+}
+
+.one-rings::before,
+.one-rings::after {
+  content: "";
+  position: absolute;
+  top: 2rpx;
+  width: 46rpx;
+  height: 46rpx;
+  border: 3rpx solid #F8A4A8;
+  border-radius: 50%;
+}
+
+.one-rings::before { left: 4rpx; }
+.one-rings::after { right: 4rpx; border-color: #7FC2C9; }
+
+.safe-top {
+  padding-top: calc(env(safe-area-inset-top) + 24rpx);
+}

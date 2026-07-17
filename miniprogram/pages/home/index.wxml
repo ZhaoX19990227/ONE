@@ -1,0 +1,89 @@
+<view class="page-shell home-page">
+  <view class="ambient-orb ambient-orb--pink"></view>
+  <view class="ambient-orb ambient-orb--blue"></view>
+
+  <view class="home-nav safe-top">
+    <view class="brand-block">
+      <text class="brand-logo">ONE</text>
+      <view class="brand-dot"></view>
+    </view>
+    <view class="nav-actions">
+      <view class="line-icon search-icon" bindtap="openSearch"></view>
+      <view class="line-icon message-icon" bindtap="openMessages"><view class="message-dot"></view></view>
+    </view>
+  </view>
+
+  <view class="greeting-block">
+    <view class="city-picker" bindtap="openCitySheet">
+      <text>{{city}}</text><text class="chevron">⌄</text>
+    </view>
+    <text class="greeting-title">今天，想和谁一起？</text>
+    <text class="greeting-subtitle">让有趣的灵魂，同频相遇。</text>
+  </view>
+
+  <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="filter-row">
+      <view
+        wx:for="{{filters}}"
+        wx:key="*this"
+        class="filter-pill {{activeFilter === item ? 'filter-pill--active' : ''}}"
+        data-filter="{{item}}"
+        bindtap="selectFilter"
+      >{{item}}</view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{loading}}" class="loading-state">
+    <view class="one-rings loading-rings"></view>
+    <text>正在寻找同频的人…</text>
+  </view>
+
+  <view wx:else class="activity-grid">
+    <view
+      wx:for="{{activities}}"
+      wx:key="id"
+      class="activity-card glass-card"
+      hover-class="activity-card--hover"
+      hover-stay-time="100"
+      data-id="{{item.id}}"
+      bindtap="openDetail"
+    >
+      <view class="activity-cover cover--{{item.theme}} cover-size--{{index % 3}}">
+        <view class="cover-ring cover-ring--one"></view>
+        <view class="cover-ring cover-ring--two"></view>
+        <view wx:if="{{item.badge}}" class="cover-badge">{{item.badge}}</view>
+        <view class="cover-type">{{item.type === 'BADMINTON' ? 'SPORT' : item.type === 'BOARD_GAME' ? 'PLAY' : item.mode === 'ONLINE' ? 'ONLINE' : 'WALK'}}</view>
+      </view>
+
+      <view class="card-content">
+        <text class="activity-time">{{item.displayTime}}</text>
+        <text class="activity-title">{{item.title}}</text>
+        <view class="tag-row">
+          <text wx:for="{{item.tags}}" wx:key="*this" wx:if="{{index < 2}}" class="mini-tag">{{item}}</text>
+        </view>
+        <view class="place-row"><text class="place-dot"></text><text>{{item.district}}</text></view>
+        <view wx:if="{{item.depositFen > 0}}" class="deposit-line"><text>🕊️</text><text>鸽子金 ¥{{item.feeYuan}}</text></view>
+        <view class="card-footer">
+          <view class="host-mini"><view class="host-avatar">{{item.host.avatar}}</view><text>{{item.host.nickname}}</text></view>
+          <view class="capacity"><text class="capacity-current">{{item.joinedCount}}</text><text>/{{item.capacity}}</text></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{citySheetVisible}}" class="sheet-mask" bindtap="closeCitySheet"></view>
+  <view class="city-sheet {{citySheetVisible ? 'city-sheet--visible' : ''}}">
+    <view class="sheet-handle"></view>
+    <text class="sheet-title">选择正在呼吸的城市</text>
+    <view
+      wx:for="{{cities}}"
+      wx:key="*this"
+      class="city-option {{city === item ? 'city-option--active' : ''}}"
+      data-city="{{item}}"
+      bindtap="selectCity"
+    >
+      <text>{{item}}</text><text wx:if="{{city === item}}">✓</text>
+    </view>
+    <text class="city-note">首发城市将根据真实活动密度逐步开放</text>
+  </view>
+</view>

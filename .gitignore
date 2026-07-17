@@ -1,0 +1,26 @@
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Java
+server/target/
+*.log
+
+# Node
+admin-web/node_modules/
+admin-web/dist/
+admin-web/*.tsbuildinfo
+admin-web/vite.config.js
+admin-web/vite.config.d.ts
+
+# Mini Program
+miniprogram/miniprogram_npm/
+miniprogram/node_modules/
+miniprogram/.miniprogram-ci/
+
+# Runtime and secrets
+.env
+application-local.yml
+data/
+uploads/

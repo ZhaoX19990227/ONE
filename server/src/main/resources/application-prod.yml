@@ -1,0 +1,10 @@
+one:
+  wechat:
+    mock-enabled: false
+  demo-data-enabled: false
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        generate_statistics: false

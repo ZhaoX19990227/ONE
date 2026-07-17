@@ -1,0 +1,58 @@
+<view class="page-shell publish-page">
+  <view class="ambient-orb ambient-orb--pink"></view>
+  <view class="publish-nav safe-top">
+    <view><text class="nav-eyebrow">CREATE A MOMENT</text><text class="nav-title">发起一场相遇</text></view>
+    <view class="one-rings mini-rings"></view>
+  </view>
+
+  <view class="form-wrap">
+    <view class="mode-switch">
+      <view class="mode-option {{mode === 'OFFLINE' ? 'mode-option--active' : ''}}" data-mode="OFFLINE" bindtap="setMode">线下见面</view>
+      <view class="mode-option {{mode === 'ONLINE' ? 'mode-option--active' : ''}}" data-mode="ONLINE" bindtap="setMode">线上同频</view>
+    </view>
+
+    <view class="form-section">
+      <text class="section-number">01</text><text class="section-title">这是一场什么活动？</text>
+      <picker mode="selector" range="{{typeOptions}}" value="{{typeIndex}}" bindchange="selectType">
+        <view class="line-field picker-field"><text class="field-label">活动类型</text><text>{{typeOptions[typeIndex]}}</text><text class="field-arrow">⌄</text></view>
+      </picker>
+      <view class="line-field">
+        <text class="field-label">活动标题</text>
+        <input value="{{title}}" maxlength="40" placeholder="例如：周四晚，不卷的羽毛球" placeholder-class="placeholder" data-field="title" bindinput="setField" />
+      </view>
+      <view class="line-field textarea-field">
+        <text class="field-label">想说的话</text>
+        <textarea value="{{description}}" maxlength="300" auto-height placeholder="说清楚气氛、边界和你期待怎样的人…" placeholder-class="placeholder" data-field="description" bindinput="setField"></textarea>
+        <text class="counter">{{description.length}} / 300</text>
+      </view>
+    </view>
+
+    <view class="form-section">
+      <text class="section-number">02</text><text class="section-title">什么时候，在哪里？</text>
+      <view class="field-pair">
+        <picker mode="date" value="{{date}}" start="{{minDate}}" bindchange="selectDate"><view class="line-field compact-field"><text class="field-label">日期</text><text>{{date}}</text></view></picker>
+        <picker mode="time" value="{{time}}" bindchange="selectTime"><view class="line-field compact-field"><text class="field-label">时间</text><text>{{time}}</text></view></picker>
+      </view>
+      <view wx:if="{{mode === 'OFFLINE'}}" class="line-field">
+        <text class="field-label">区域</text><input value="{{district}}" maxlength="30" placeholder="例如：静安区" placeholder-class="placeholder" data-field="district" bindinput="setField" />
+      </view>
+      <view wx:if="{{mode === 'OFFLINE'}}" class="line-field">
+        <text class="field-label">集合地点</text><input value="{{address}}" maxlength="80" placeholder="报名成功后才展示完整地址" placeholder-class="placeholder" data-field="address" bindinput="setField" />
+      </view>
+    </view>
+
+    <view class="form-section slider-section">
+      <text class="section-number">03</text><text class="section-title">给这场活动一点边界</text>
+      <view class="slider-head"><text>人数上限</text><text class="slider-value">{{capacity}} 人</text></view>
+      <slider min="2" max="20" step="1" value="{{capacity}}" activeColor="#7FC2C9" backgroundColor="#EDE5E2" block-color="#FFFFFF" block-size="22" bindchange="selectCapacity" />
+
+      <view class="slider-head deposit-head"><view><text>🕊️ 鸽子金</text><text class="slider-help">首版为产品演示，接支付前不会真实扣款</text></view><text class="deposit-value">¥{{depositYuan}}</text></view>
+      <slider min="0" max="100" step="5" value="{{depositYuan}}" activeColor="#F8A4A8" backgroundColor="#EDE5E2" block-color="#FFFFFF" block-size="24" bindchanging="moveDeposit" />
+
+      <view class="switch-row"><view><text>报名需要确认</text><text>更适合对参与者有明确要求的活动</text></view><switch checked="{{approvalRequired}}" color="#F8A4A8" bindchange="toggleApproval" /></view>
+    </view>
+
+    <view class="privacy-hint"><text>◉</text><text>发布即表示你愿意尊重每个人的身份、边界和表达。公开内容将经过安全检测。</text></view>
+    <button class="one-button publish-button" loading="{{publishing}}" bindtap="publish">发出同频信号</button>
+  </view>
+</view>

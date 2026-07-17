@@ -1,0 +1,82 @@
+name: one
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-one}
+      MYSQL_USER: ${MYSQL_USER:-one}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-one-local-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-local-password}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root-local-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [one-internal]
+
+  server:
+    build:
+      context: ./server
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-one}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: ${MYSQL_USER:-one}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-one-local-password}
+      ONE_TOKEN_SECRET: ${ONE_TOKEN_SECRET:-local-development-secret-must-be-32-chars}
+      ONE_ADMIN_USERNAME: ${ONE_ADMIN_USERNAME:-one-admin}
+      ONE_ADMIN_PASSWORD: ${ONE_ADMIN_PASSWORD:-local-admin-password}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      WECHAT_MOCK_ENABLED: ${WECHAT_MOCK_ENABLED:-true}
+      ONE_DEMO_DATA_ENABLED: ${ONE_DEMO_DATA_ENABLED:-true}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65 -XX:+UseG1GC -Dfile.encoding=UTF-8
+      TZ: Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [one-internal]
+
+  admin-web:
+    build:
+      context: ./admin-web
+    restart: unless-stopped
+    profiles: [production]
+    networks: [one-internal]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    profiles: [production]
+    environment:
+      ONE_DOMAIN: ${ONE_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [server, admin-web]
+    networks: [one-internal]
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  one-internal:
+    driver: bridge
