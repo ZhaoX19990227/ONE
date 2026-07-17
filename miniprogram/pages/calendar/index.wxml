@@ -1,0 +1,23 @@
+<view class="page theme-{{theme}}">
+  <view class="orb orb-a"></view><view class="orb orb-b"></view>
+  <view class="nav"><view class="logo">ONE<view class="logo-dot"></view></view><view class="month-nav"><text bindtap="previousMonth">‹</text><view>{{year}}.{{month < 10 ? '0' + month : month}}</view><text bindtap="nextMonth">›</text></view></view>
+  <view class="headline">生活，不只发生在大事里。</view><view class="muted">每一顿、每一杯，都会在这里留下柔软的坐标。</view>
+  <view class="summary-card glass">
+    <view><text class="summary-number">{{activeDays}}</text><text class="summary-unit">天有记录</text></view>
+    <view class="summary-line"></view><view><text class="summary-number small">¥{{totalAmountFen / 100}}</text><text class="summary-unit">本月吃喝</text></view>
+    <button class="share-button" bindtap="generatePoster">生成月报 ↗</button>
+  </view>
+  <view class="calendar-card glass">
+    <view class="week"><text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this">{{item}}</text></view>
+    <view class="grid">
+      <view wx:for="{{cells}}" wx:key="index" class="day {{item.empty ? 'blank' : ''}} {{selectedDate === item.date ? 'selected' : ''}}" data-date="{{item.date}}" bindtap="selectDay">
+        <text>{{item.day}}</text>
+        <view wx:if="{{item.totalCount}}" class="dots"><view wx:if="{{item.mealCount}}" class="meal"></view><view wx:if="{{item.milkTeaCount}}" class="tea"></view><view wx:if="{{item.coffeeCount}}" class="coffee"></view><view wx:if="{{item.privateHabitCount}}" class="deer"></view></view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{summary}}" class="insight glass"><view class="insight-label">ONE 的观察</view><view>{{summary.insight}}</view></view>
+  <view wx:if="{{selectedDate}}" class="section-title">{{selectedDate}} · 生活切片</view>
+  <view class="record-list"><view wx:for="{{dayRecords}}" wx:key="id" class="record glass"><image wx:if="{{item.thumbnailUrl}}" src="{{item.thumbnailUrl}}" mode="aspectFill"></image><view wx:else class="mini-logo" style="background:{{item.brandColor || '#E6DAD7'}}">{{item.brandShortName || (item.type === 'PRIVATE_HABIT' ? '鹿' : 'ONE')}}</view><view class="record-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted">{{item.deerMessage || item.feedback || '被 ONE 记住'}}</view></view><text wx:if="{{item.actualAmountFen}}" class="amount">¥{{item.actualAmountFen / 100}}</text></view></view>
+  <canvas canvas-id="poster" class="poster-canvas"></canvas>
+</view>

@@ -4,7 +4,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,24 +15,21 @@ import java.util.List;
 
 @Component
 public class BearerTokenFilter extends OncePerRequestFilter {
+    private final SessionTokenService tokens;
 
-    private static final String PREFIX = "Bearer ";
-    private final SessionTokenService tokenService;
-
-    public BearerTokenFilter(SessionTokenService tokenService) {
-        this.tokenService = tokenService;
-    }
+    public BearerTokenFilter(SessionTokenService tokens) { this.tokens = tokens; }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorization != null && authorization.startsWith(PREFIX)) {
-            tokenService.verify(authorization.substring(PREFIX.length())).ifPresent(principal -> {
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + principal.role().name());
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            OnePrincipal principal = tokens.verify(authorization.substring(7));
+            if (principal != null) {
                 SecurityContextHolder.getContext().setAuthentication(
-                        new UsernamePasswordAuthenticationToken(principal, null, List.of(authority)));
-            });
+                        new UsernamePasswordAuthenticationToken(principal, null,
+                                List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+            }
         }
         filterChain.doFilter(request, response);
     }

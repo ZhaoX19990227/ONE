@@ -1,89 +1,61 @@
-<view class="page-shell home-page">
-  <view class="ambient-orb ambient-orb--pink"></view>
-  <view class="ambient-orb ambient-orb--blue"></view>
+<view class="page theme-{{theme}}">
+  <view class="orb orb-a"></view><view class="orb orb-b"></view>
+  <view class="nav"><view class="logo">ONE<view class="logo-dot"></view></view><view class="today-dot">TODAY</view></view>
+  <view class="headline">{{greeting}}</view>
+  <view class="muted">让每一次选择，都悄悄变成更懂你的记忆。</view>
 
-  <view class="home-nav safe-top">
-    <view class="brand-block">
-      <text class="brand-logo">ONE</text>
-      <view class="brand-dot"></view>
-    </view>
-    <view class="nav-actions">
-      <view class="line-icon search-icon" bindtap="openSearch"></view>
-      <view class="line-icon message-icon" bindtap="openMessages"><view class="message-dot"></view></view>
+  <view class="dimension-switch glass">
+    <view class="dimension {{dimension === 'MEAL' ? 'active' : ''}}" data-value="MEAL" bindtap="selectDimension"><text class="d-icon">⌁</text><text>吃饭</text></view>
+    <view class="dimension {{dimension === 'MILK_TEA' || dimension === 'COFFEE' ? 'active' : ''}}" data-value="MILK_TEA" bindtap="selectDimension"><text class="d-icon">◡</text><text>奶茶咖啡</text></view>
+    <view class="dimension {{dimension === 'PRIVATE_HABIT' ? 'active' : ''}}" data-value="PRIVATE_HABIT" bindtap="selectDimension"><text class="d-icon">♢</text><text>鹿一下</text></view>
+  </view>
+
+  <view wx:if="{{dimension === 'MILK_TEA' || dimension === 'COFFEE'}}" class="drink-toggle">
+    <view class="pill {{dimension === 'MILK_TEA' ? 'on' : ''}}" data-value="MILK_TEA" bindtap="selectDrink">奶茶 / 茶饮</view>
+    <view class="pill {{dimension === 'COFFEE' ? 'on' : ''}}" data-value="COFFEE" bindtap="selectDrink">咖啡</view>
+  </view>
+
+  <view class="hero-card glass">
+    <view class="hero-kicker">{{dimension === 'PRIVATE_HABIT' ? 'PRIVATE RHYTHM' : 'ONE DECISION'}}</view>
+    <view class="hero-title">{{dimension === 'MEAL' ? '这一顿，让圆盘替你偏心' : dimension === 'PRIVATE_HABIT' ? '一只小鹿，轻轻路过今天' : '今天的这一杯，刚好懂你'}}</view>
+    <view class="hero-copy">{{dimension === 'PRIVATE_HABIT' ? '只属于你的节奏，不参与推荐和分享。' : '结合时间、预算和过去的口味反馈，越记录越合拍。'}}</view>
+    <button class="primary-btn" data-mode="{{dimension === 'PRIVATE_HABIT' ? '' : 'SPIN'}}" bindtap="recommend" loading="{{loading}}">{{dimension === 'PRIVATE_HABIT' ? '记一只鹿' : '转一转'}}</button>
+    <view class="hero-actions" wx:if="{{dimension !== 'PRIVATE_HABIT'}}">
+      <button class="ghost-btn" data-mode="SMART" bindtap="recommend">✨ 懂我推荐</button>
+      <button class="ghost-btn" bindtap="photoRecord">⌾ 拍照记录</button>
     </view>
   </view>
 
-  <view class="greeting-block">
-    <view class="city-picker" bindtap="openCitySheet">
-      <text>{{city}}</text><text class="chevron">⌄</text>
+  <view class="section-title">今天的生活切片</view>
+  <view wx:if="{{records.length}}" class="record-list">
+    <view wx:for="{{records}}" wx:key="id" class="record-row glass">
+      <image wx:if="{{item.thumbnailUrl}}" class="thumb" src="{{item.thumbnailUrl}}" mode="aspectFill"></image>
+      <view wx:else class="brand-mark" style="background:{{item.brandColor || '#E9DFDC'}}">{{item.brandShortName || (item.type === 'PRIVATE_HABIT' ? '鹿' : 'ONE')}}</view>
+      <view class="record-main"><view class="record-title">{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted line">{{item.deerMessage || item.feedback || '已收入今天的记忆'}}</view></view>
+      <view wx:if="{{item.actualAmountFen !== undefined}}" class="price">¥{{item.actualAmountFen / 100}}</view>
     </view>
-    <text class="greeting-title">今天，想和谁一起？</text>
-    <text class="greeting-subtitle">让有趣的灵魂，同频相遇。</text>
   </view>
+  <view wx:else class="empty glass"><view class="rings"></view>今天还没有留下记录<br/>第一口，从不纠结开始。</view>
 
-  <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="filter-row">
-      <view
-        wx:for="{{filters}}"
-        wx:key="*this"
-        class="filter-pill {{activeFilter === item ? 'filter-pill--active' : ''}}"
-        data-filter="{{item}}"
-        bindtap="selectFilter"
-      >{{item}}</view>
+  <view wx:if="{{recommendation}}" class="mask" bindtap="closeRecommendation"></view>
+  <view wx:if="{{recommendation}}" class="recommend-sheet glass">
+    <view class="sheet-handle"></view><view class="sheet-close" bindtap="closeRecommendation">×</view>
+    <view class="sheet-kicker">{{recommendation.mode === 'SPIN' ? 'LUCKY ONE' : 'JUST FOR YOU'}}</view>
+    <view class="sheet-title">{{recommendation.openingLine}}</view>
+    <view wx:if="{{recommendation.mode === 'SPIN'}}" class="wheel-wrap">
+      <view class="wheel-pointer">◆</view>
+      <view class="wheel" style="{{wheelStyle}}"><view class="wheel-core"><view class="rings small"></view><text>ONE</text></view></view>
     </view>
-  </scroll-view>
-
-  <view wx:if="{{loading}}" class="loading-state">
-    <view class="one-rings loading-rings"></view>
-    <text>正在寻找同频的人…</text>
-  </view>
-
-  <view wx:else class="activity-grid">
-    <view
-      wx:for="{{activities}}"
-      wx:key="id"
-      class="activity-card glass-card"
-      hover-class="activity-card--hover"
-      hover-stay-time="100"
-      data-id="{{item.id}}"
-      bindtap="openDetail"
-    >
-      <view class="activity-cover cover--{{item.theme}} cover-size--{{index % 3}}">
-        <view class="cover-ring cover-ring--one"></view>
-        <view class="cover-ring cover-ring--two"></view>
-        <view wx:if="{{item.badge}}" class="cover-badge">{{item.badge}}</view>
-        <view class="cover-type">{{item.type === 'BADMINTON' ? 'SPORT' : item.type === 'BOARD_GAME' ? 'PLAY' : item.mode === 'ONLINE' ? 'ONLINE' : 'WALK'}}</view>
-      </view>
-
-      <view class="card-content">
-        <text class="activity-time">{{item.displayTime}}</text>
-        <text class="activity-title">{{item.title}}</text>
-        <view class="tag-row">
-          <text wx:for="{{item.tags}}" wx:key="*this" wx:if="{{index < 2}}" class="mini-tag">{{item}}</text>
-        </view>
-        <view class="place-row"><text class="place-dot"></text><text>{{item.district}}</text></view>
-        <view wx:if="{{item.depositFen > 0}}" class="deposit-line"><text>🕊️</text><text>鸽子金 ¥{{item.feeYuan}}</text></view>
-        <view class="card-footer">
-          <view class="host-mini"><view class="host-avatar">{{item.host.avatar}}</view><text>{{item.host.nickname}}</text></view>
-          <view class="capacity"><text class="capacity-current">{{item.joinedCount}}</text><text>/{{item.capacity}}</text></view>
-        </view>
+    <view class="candidate-list">
+      <view wx:for="{{recommendation.candidates}}" wx:key="id" class="candidate {{selected && selected.id === item.id ? 'selected' : ''}}" data-index="{{index}}" bindtap="tapCandidate">
+        <view class="brand-mark tiny" style="background:{{item.brandColor || '#E9DFDC'}}">{{item.brandShortName || 'ONE'}}</view>
+        <view class="candidate-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.itemName}}</view><view class="muted line">{{item.reason}}</view></view>
+        <view class="candidate-price">{{item.defaultPriceFen ? '¥' + item.defaultPriceFen / 100 : '试试'}}</view>
       </view>
     </view>
+    <button wx:if="{{selected}}" class="primary-btn join" bindtap="recordSelected">就选它，去记录</button>
   </view>
 
-  <view wx:if="{{citySheetVisible}}" class="sheet-mask" bindtap="closeCitySheet"></view>
-  <view class="city-sheet {{citySheetVisible ? 'city-sheet--visible' : ''}}">
-    <view class="sheet-handle"></view>
-    <text class="sheet-title">选择正在呼吸的城市</text>
-    <view
-      wx:for="{{cities}}"
-      wx:key="*this"
-      class="city-option {{city === item ? 'city-option--active' : ''}}"
-      data-city="{{item}}"
-      bindtap="selectCity"
-    >
-      <text>{{item}}</text><text wx:if="{{city === item}}">✓</text>
-    </view>
-    <text class="city-note">首发城市将根据真实活动密度逐步开放</text>
-  </view>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+  <view wx:if="{{deerBurst}}" class="petals"><view wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this" class="petal p{{index}}"></view></view>
 </view>

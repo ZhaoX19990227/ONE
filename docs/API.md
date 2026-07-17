@@ -1,56 +1,27 @@
-# ONE MVP 接口清单
+# API 清单
 
-所有接口统一以 `/api` 开头。除健康检查、微信登录、管理员登录、活动发现和活动详情外，业务接口均要求：
-
-```http
-Authorization: Bearer <token>
-```
-
-## 身份与资料
+统一前缀 `/api`，除健康检查、登录和公开目录外均需 Bearer Token。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| POST | `/auth/wechat` | 使用 `wx.login` 的 code 换取 ONE 会话；本地 Mock 可直接传任意非空 code |
-| POST | `/auth/admin` | 使用服务端环境变量配置的管理员账号登录 |
-| GET | `/me` | 获取兴趣护照与履约统计 |
-| PATCH | `/me` | 更新昵称、头像、城市、简介与兴趣标签 |
+| POST | `/auth/wechat` | 微信 code 登录 |
+| GET/PUT | `/me` | 资料、口味和可见性 |
+| GET | `/catalog/categories` | 分类目录 |
+| GET | `/catalog/brands` | 品牌目录 |
+| GET | `/catalog/items` | 单品目录 |
+| POST | `/recommendations` | 生成三个候选和记忆提示 |
+| POST | `/recommendations/{id}/candidates/{candidateId}/choose` | 记录用户选择 |
+| POST | `/media/images` | 上传待识别照片 |
+| POST | `/records/meals` | 新增吃饭记录并生成记忆 |
+| POST | `/records/drinks` | 新增奶茶/咖啡记录并生成记忆 |
+| POST | `/recognitions` | 上传完成后创建图片识别任务 |
+| POST | `/recognitions/{id}/confirm` | 确认/修正品牌、品类和产品 |
+| POST | `/records/deer` | 新增鹿一下记录 |
+| GET | `/records/today` | 今日时间线 |
+| GET | `/records?date=YYYY-MM-DD` | 某日详情 |
+| GET | `/calendar/month?month=YYYY-MM` | 月历聚合 |
+| GET | `/analytics/summary?from=&to=` | 日/周/月汇总数据 |
 
-## 活动闭环
+错误统一返回稳定 `code`，客户端不得匹配中文错误文案。
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/activities?cityCode=&page=0&size=20` | 发现页；稳定分页响应为 `content/page/size/totalElements/totalPages` |
-| GET | `/activities/{id}` | 活动详情；仅发起人和已确认报名者可见精确位置 |
-| POST | `/activities` | 发布线上或线下活动，费用与鸽子金均使用“分” |
-| POST | `/activities/{id}/enrollments` | 报名；支持直接确认、待审核和满员候补 |
-| DELETE | `/activities/{id}/enrollments/me` | 取消报名并自动递补最早候补用户 |
-| POST | `/activities/{id}/enrollments/{enrollmentId}/decision` | 发起人审批报名 |
-| POST | `/activities/{id}/check-in` | 活动开始前 2 小时至结束期间签到 |
-| GET | `/me/enrollments` | 我的活动与当前报名状态 |
-
-报名和取消通过活动行悲观锁串行修改席位，数据库同时以 `(activity_id, user_id)` 唯一索引兜底，避免并发超卖与重复报名。
-
-## AI 与安全
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| POST | `/ai/activity-draft` | 将自然语言整理为类型、模式、人数、鸽子金、标签和结构化属性 |
-| POST | `/reports` | 举报用户或活动 |
-| GET | `/admin/overview` | 运营概览（ADMIN） |
-| GET | `/admin/activities` | 活动管理列表（ADMIN） |
-| GET | `/admin/reports` | 待处理举报（ADMIN） |
-| POST | `/admin/reports/{id}/resolve` | 标记举报已处理（ADMIN） |
-
-当前 AI 默认实现为本地规则引擎，零调用成本且返回结果可解释；`ActivityDraftAssistant` 已作为稳定扩展口，后续可接入通义千问等模型，并保留规则回退。活动发布前会经过 `ContentSafetyGateway`，当前为本地敏感标记兜底，上线前应接入微信内容安全能力。
-
-## 错误结构
-
-```json
-{
-  "code": "ACTIVITY_FULL",
-  "message": "活动名额已满",
-  "timestamp": "2026-07-16T12:00:00Z"
-}
-```
-
-前端应依据 `code` 处理业务分支，不要匹配中文 `message`。
+推荐确认和自主录入最终使用相同的记录创建服务，保证日历、统计与记忆的数据口径一致。

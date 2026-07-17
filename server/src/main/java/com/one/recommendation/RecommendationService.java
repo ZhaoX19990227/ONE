@@ -1,0 +1,184 @@
+package com.one.recommendation;
+
+import com.one.catalog.CatalogBrand;
+import com.one.catalog.CatalogItem;
+import com.one.catalog.CatalogItemRepository;
+import com.one.common.BusinessException;
+import com.one.common.Dimension;
+import com.one.memory.MemorySignal;
+import com.one.memory.PreferenceMemory;
+import com.one.memory.PreferenceMemoryRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
+@Service
+public class RecommendationService {
+    private static final ZoneId SHANGHAI = ZoneId.of("Asia/Shanghai");
+    private final DecisionSessionRepository sessions;
+    private final DecisionCandidateRepository candidates;
+    private final CatalogItemRepository items;
+    private final PreferenceMemoryRepository memories;
+    private final ObjectMapper objectMapper;
+
+    public RecommendationService(DecisionSessionRepository sessions, DecisionCandidateRepository candidates,
+                                 CatalogItemRepository items, PreferenceMemoryRepository memories,
+                                 ObjectMapper objectMapper) {
+        this.sessions = sessions; this.candidates = candidates; this.items = items;
+        this.memories = memories; this.objectMapper = objectMapper;
+    }
+
+    @Transactional
+    public RecommendationDtos.View recommend(long userId, RecommendationDtos.Request request) throws Exception {
+        if (!request.dimension().isRecommendable()) {
+            throw new BusinessException("DIMENSION_NOT_RECOMMENDABLE", "这个维度只记录，不做推荐", HttpStatus.BAD_REQUEST);
+        }
+        ZonedDateTime now = ZonedDateTime.now(SHANGHAI);
+        TimeSlot timeSlot = TimeSlot.at(now);
+        List<CatalogItem> catalog = items.findByDimensionAndActiveTrue(request.dimension());
+        List<CatalogItem> affordable = catalog.stream().filter(item -> request.budgetMaxFen() == null
+                || item.getDefaultPriceFen() == null || item.getDefaultPriceFen() <= request.budgetMaxFen()).toList();
+        if (!affordable.isEmpty()) catalog = affordable;
+        if (catalog.isEmpty()) throw new BusinessException("NO_RECOMMENDATION", "这个分类还没有可推荐内容", HttpStatus.NOT_FOUND);
+
+        List<PreferenceMemory> memoryList = memories
+                .findTop100ByUserIdAndDimensionAndActiveTrueOrderBySourceAtDesc(userId, request.dimension());
+        DecisionSession session = sessions.save(DecisionSession.presented(userId, request.dimension(), request.mode(),
+                timeSlot, request.budgetMaxFen(), "{}"));
+        int limit = request.mode() == DecisionMode.SPIN ? Math.min(8, catalog.size()) : Math.min(3, catalog.size());
+        List<ScoredItem> selected = catalog.stream().map(item -> score(item, memoryList, timeSlot))
+                .sorted(Comparator.comparingInt(ScoredItem::score).reversed()).limit(limit).toList();
+        List<DecisionCandidate> saved = new ArrayList<>();
+        for (int index = 0; index < selected.size(); index++) {
+            ScoredItem selectedItem = selected.get(index);
+            String suggestionJson = selectedItem.memory() == null || selectedItem.memory().getSuggestedValue() == null
+                    ? null : objectMapper.writeValueAsString(Map.of(
+                    "attribute", selectedItem.memory().getAttributeKey(),
+                    "suggestedValue", selectedItem.memory().getSuggestedValue(),
+                    "sourceText", selectedItem.memory().getDisplayText()));
+            saved.add(DecisionCandidate.of(session, selectedItem.item(), selectedItem.score(),
+                    selectedItem.reason(), suggestionJson, selectedItem.memory(), index + 1));
+        }
+        return view(session, candidates.saveAll(saved));
+    }
+
+    @Transactional(readOnly = true)
+    public RecommendationDtos.View get(long userId, long sessionId) {
+        DecisionSession session = owned(userId, sessionId);
+        return view(session, candidates.findBySessionIdOrderByPositionNoAsc(sessionId));
+    }
+
+    @Transactional
+    public RecommendationDtos.View choose(long userId, long sessionId, long candidateId) {
+        DecisionSession session = owned(userId, sessionId);
+        candidates.findByIdAndSessionId(candidateId, sessionId)
+                .orElseThrow(() -> new BusinessException("CANDIDATE_NOT_FOUND", "这个选项不在本轮推荐里", HttpStatus.NOT_FOUND));
+        session.choose(candidateId);
+        sessions.save(session);
+        return view(session, candidates.findBySessionIdOrderByPositionNoAsc(sessionId));
+    }
+
+    @Transactional(readOnly = true)
+    public void validateChosenItem(long userId, long sessionId, Dimension dimension, Long itemId) {
+        DecisionSession session = owned(userId, sessionId);
+        if (session.getDimension() != dimension || session.getChosenCandidateId() == null) {
+            throw new BusinessException("DECISION_MISMATCH", "推荐选择与本次记录不一致", HttpStatus.CONFLICT);
+        }
+        DecisionCandidate chosen = candidates.findByIdAndSessionId(session.getChosenCandidateId(), sessionId)
+                .orElseThrow(() -> new BusinessException("CANDIDATE_NOT_FOUND", "推荐选项不存在", HttpStatus.NOT_FOUND));
+        if (itemId == null || !chosen.getItem().getId().equals(itemId)) {
+            throw new BusinessException("DECISION_ITEM_MISMATCH", "记录内容不是刚刚确认的推荐", HttpStatus.CONFLICT);
+        }
+    }
+
+    @Transactional
+    public void markRecorded(long userId, long sessionId, long recordId) {
+        DecisionSession session = owned(userId, sessionId);
+        session.record(recordId);
+        sessions.save(session);
+    }
+
+    private ScoredItem score(CatalogItem item, List<PreferenceMemory> memoryList, TimeSlot timeSlot) {
+        PreferenceMemory memory = memoryList.stream()
+                .filter(value -> value.getItemId() != null && value.getItemId().equals(item.getId()))
+                .findFirst().orElseGet(() -> {
+                    CatalogBrand brand = item.getBrand();
+                    return brand == null ? null : memoryList.stream()
+                            .filter(value -> value.getBrandId() != null && value.getBrandId().equals(brand.getId()))
+                            .findFirst().orElse(null);
+                });
+        int score = item.getBaseWeight() + ThreadLocalRandom.current().nextInt(0, 31);
+        if (item.getAttributes() != null && item.getAttributes().contains(timeSlot.name())) score += 35;
+        String reason = timeReason(timeSlot);
+        if (memory != null) {
+            if (memory.getSignal() == MemorySignal.REPURCHASE) {
+                score += memory.getStrength();
+                reason = memory.getDisplayText() + "，所以今天又把它放到你面前。";
+            } else if (memory.getSignal() == MemorySignal.DISLIKE) {
+                score -= memory.getStrength();
+                reason = "记得" + memory.getDisplayText() + "，这次只低权重保留。";
+            } else {
+                score += 15;
+                reason = memory.getDisplayText() + suggestionSuffix(memory);
+            }
+        }
+        return new ScoredItem(item, score, reason, memory);
+    }
+
+    private String suggestionSuffix(PreferenceMemory memory) {
+        return memory.getSuggestedValue() == null ? "，这次会替你留意。" : "，这次建议调成更合适的甜度。";
+    }
+
+    private String timeReason(TimeSlot slot) {
+        return switch (slot) {
+            case BREAKFAST -> "早上先吃得舒服一点。";
+            case LUNCH -> "现在适合来一份不费脑子的满足。";
+            case AFTERNOON -> "下午的这口，适合慢一点喝。";
+            case DINNER -> "今晚把选择交给 ONE。";
+            case LATE_NIGHT -> "夜深了，选个此刻刚好的。";
+        };
+    }
+
+    private DecisionSession owned(long userId, long sessionId) {
+        return sessions.findById(sessionId).filter(value -> value.getUserId() == userId)
+                .orElseThrow(() -> new BusinessException("DECISION_NOT_FOUND", "这轮推荐不存在", HttpStatus.NOT_FOUND));
+    }
+
+    private RecommendationDtos.View view(DecisionSession session, List<DecisionCandidate> values) {
+        List<RecommendationDtos.Candidate> views = values.stream().map(value -> {
+            CatalogBrand brand = value.getBrand();
+            CatalogItem item = value.getItem();
+            return new RecommendationDtos.Candidate(value.getId(), value.getPositionNo(), value.getCategory().getId(),
+                    value.getCategory().getName(), brand == null ? null : brand.getId(),
+                    brand == null ? null : brand.getName(), brand == null ? null : brand.getShortName(),
+                    brand == null ? null : brand.getLogoUrl(), brand == null ? null : brand.getBrandColor(),
+                    item.getId(), item.getName(), item.getImageUrl(), item.getDefaultPriceFen(),
+                    value.getReasonText(), value.getSuggestionJson(), value.getId().equals(session.getChosenCandidateId()));
+        }).toList();
+        return new RecommendationDtos.View(session.getId(), session.getDimension(), session.getMode(),
+                session.getTimeSlot(), session.getStatus(), session.getChosenCandidateId(),
+                openingLine(session.getMode(), session.getTimeSlot()), views);
+    }
+
+    private String openingLine(DecisionMode mode, TimeSlot slot) {
+        if (mode == DecisionMode.SPIN) return "别纠结，让圆盘替你偏心一次。";
+        return switch (slot) {
+            case BREAKFAST -> "早安，先照顾今天的第一口。";
+            case LUNCH -> "午间到站，按你的记忆挑了三样。";
+            case AFTERNOON -> "下午适合给自己一点轻松。";
+            case DINNER -> "今晚想吃什么，ONE 已经有点懂你了。";
+            case LATE_NIGHT -> "夜宵可以有，但让这一口更合适。";
+        };
+    }
+
+    private record ScoredItem(CatalogItem item, int score, String reason, PreferenceMemory memory) {}
+}

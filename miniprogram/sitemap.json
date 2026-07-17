@@ -1,4 +1,1 @@
-{
-  "desc": "ONE 小程序页面索引规则",
-  "rules": [{ "action": "allow", "page": "*" }]
-}
+{ "desc": "ONE private group utility", "rules": [{ "action": "disallow", "page": "*" }] }

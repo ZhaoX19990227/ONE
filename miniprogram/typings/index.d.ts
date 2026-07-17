@@ -1,6 +1,4 @@
 interface IAppOption {
-  globalData: {
-    token: string;
-    selectedCity: string;
-  };
+  globalData: { token: string; apiBase: string }
+  ensureLogin(): Promise<string>
 }

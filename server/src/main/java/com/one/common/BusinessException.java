@@ -3,7 +3,6 @@ package com.one.common;
 import org.springframework.http.HttpStatus;
 
 public class BusinessException extends RuntimeException {
-
     private final String code;
     private final HttpStatus status;
 
@@ -13,11 +12,6 @@ public class BusinessException extends RuntimeException {
         this.status = status;
     }
 
-    public String code() {
-        return code;
-    }
-
-    public HttpStatus status() {
-        return status;
-    }
+    public String code() { return code; }
+    public HttpStatus status() { return status; }
 }

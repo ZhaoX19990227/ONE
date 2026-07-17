@@ -1,0 +1,41 @@
+<view class="page theme-{{theme}} record-page">
+  <view class="orb orb-a"></view>
+  <view class="nav"><view class="back" bindtap="goBack">‹</view><view class="nav-title">记下这一口</view><view class="nav-side">ONE</view></view>
+  <view class="photo-card glass" bindtap="choosePhoto">
+    <image wx:if="{{imageUrl}}" src="{{imageUrl}}" mode="aspectFill"></image>
+    <view wx:else class="photo-empty"><view class="camera-ring">⌾</view><view>拍照，让 ONE 先认一认</view><view class="muted">也可以从相册选择</view></view>
+    <view wx:if="{{recognizing}}" class="recognizing"><view class="rings"></view><text>Qwen 正在看这张照片…</text></view>
+  </view>
+
+  <view wx:if="{{candidates.length}}" class="form-section">
+    <view class="section-title">你拍的是这个吗？</view>
+    <scroll-view scroll-x class="candidate-scroll">
+      <view class="candidate-row">
+        <view wx:for="{{candidates}}" wx:key="itemName" class="vision-chip glass {{selectedIndex === index ? 'selected' : ''}}" data-index="{{index}}" bindtap="selectCandidate">
+          <view class="confidence">{{item.catalogMatched ? '已匹配目录' : '待确认'}} · {{item.confidence * 100}}%</view>
+          <view class="vision-name">{{item.brandName ? item.brandName + ' · ' : ''}}{{item.itemName}}</view><view class="muted evidence">{{item.evidence || '以你确认为准'}}</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="form-card glass">
+    <view class="field"><view class="label">品牌 <text>可选</text></view><input value="{{customBrandName}}" placeholder="例如 喜茶 / Manner" bindinput="inputBrand" /></view>
+    <view class="field"><view class="label">吃喝了什么</view><input value="{{customItemName}}" placeholder="例如 伯牙绝弦 / 牛肉面" bindinput="inputItem" /></view>
+    <view class="field"><view class="label">实际花费 <text>可选</text></view><view class="money-input"><text>¥</text><input type="digit" value="{{amountYuan}}" placeholder="0.00" bindinput="inputAmount" /></view></view>
+  </view>
+
+  <view wx:if="{{dimension === 'MILK_TEA'}}" class="form-section">
+    <view class="section-title">甜度记忆</view>
+    <view class="option-row"><view wx:for="{{[{v:'NO_SUGAR',t:'无糖'},{v:'LOW',t:'少少甜'},{v:'THREE',t:'三分'},{v:'FIVE',t:'五分'},{v:'SEVEN',t:'七分'}]}}" wx:key="v" class="pill option {{sugarLevel === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectSugar">{{item.t}}</view></view>
+  </view>
+  <view class="form-section">
+    <view class="section-title">这一口怎么样？</view>
+    <view class="option-row"><view wx:for="{{[{v:'JUST_RIGHT',t:'刚刚好'},{v:'A_BIT_SWEET',t:'有点甜'},{v:'TOO_SWEET',t:'太甜了'},{v:'TOO_SALTY',t:'有点咸'},{v:'TOO_SPICY',t:'太辣'}]}}" wx:key="v" class="pill option {{tasteFeedback === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectFeedback">{{item.t}}</view></view>
+    <view class="sub-title">还会再来吗？</view>
+    <view class="option-row"><view class="pill option {{repurchaseIntent === 'YES' ? 'on' : ''}}" data-value="YES" bindtap="selectRepurchase">会，记住它</view><view class="pill option {{repurchaseIntent === 'UNSURE' ? 'on' : ''}}" data-value="UNSURE" bindtap="selectRepurchase">再看看</view><view class="pill option {{repurchaseIntent === 'NO' ? 'on' : ''}}" data-value="NO" bindtap="selectRepurchase">下次不了</view></view>
+  </view>
+  <view class="form-section"><view class="section-title">给今天打个分</view><view class="stars"><text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="{{rating >= item ? 'lit' : ''}}" data-value="{{item}}" bindtap="selectRating">✦</text></view></view>
+  <button class="primary-btn save" loading="{{saving}}" bindtap="save">确认，收入今天</button>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+</view>

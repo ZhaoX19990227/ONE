@@ -9,30 +9,21 @@ import java.time.Instant;
 
 @MappedSuperclass
 public abstract class AuditedEntity {
-
     @Column(name = "created_at", nullable = false, updatable = false)
-    protected Instant createdAt;
-
+    private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
-    protected Instant updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
-    protected void prePersist() {
+    void beforeCreate() {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
-    protected void preUpdate() {
-        updatedAt = Instant.now();
-    }
+    void beforeUpdate() { updatedAt = Instant.now(); }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

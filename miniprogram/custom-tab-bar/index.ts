@@ -1,19 +1,11 @@
 Component({
-  data: {
-    selected: 0,
-    items: [
-      { pagePath: '/pages/home/index', text: '发现', icon: '⌂' },
-      { pagePath: '/pages/publish/index', text: '发起', icon: '＋' },
-      { pagePath: '/pages/trips/index', text: '行程', icon: '○' },
-      { pagePath: '/pages/profile/index', text: '我的', icon: '◇' }
-    ]
-  },
-
-  methods: {
-    switchTab(event: WechatMiniprogram.TouchEvent) {
-      const { path, index } = event.currentTarget.dataset;
-      if (index === this.data.selected) return;
-      wx.switchTab({ url: path });
-    }
-  }
-});
+  data: { selected: 0, list: [
+    { pagePath: '/pages/home/index', text: '转一转', symbol: '↻' },
+    { pagePath: '/pages/calendar/index', text: '日历', symbol: '□' },
+    { pagePath: '/pages/profile/index', text: '我的', symbol: '○' }
+  ] },
+  methods: { switchTab(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    wx.switchTab({ url: this.data.list[index].pagePath })
+  } }
+})

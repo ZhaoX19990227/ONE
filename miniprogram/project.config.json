@@ -1,18 +1,8 @@
 {
-  "appid": "touristappid",
-  "projectname": "ONE",
-  "description": "ONE 兴趣搭子微信小程序",
-  "compileType": "miniprogram",
+  "description": "ONE · 群友吃喝生活记录",
   "miniprogramRoot": "./",
-  "setting": {
-    "useCompilerPlugins": ["typescript"],
-    "es6": true,
-    "minified": true,
-    "postcss": true,
-    "urlCheck": false,
-    "coverView": true,
-    "enhance": true,
-    "showShadowRootInWxmlPanel": true
-  },
-  "condition": {}
+  "compileType": "miniprogram",
+  "setting": { "es6": true, "enhance": true, "postcss": true, "minified": true, "urlCheck": false },
+  "appid": "touristappid",
+  "projectname": "ONE"
 }

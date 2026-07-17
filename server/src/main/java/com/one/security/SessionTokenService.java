@@ -1,77 +1,56 @@
 package com.one.security;
 
 import com.one.config.OneProperties;
-import com.one.identity.UserRole;
-import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Optional;
 
 @Service
 public class SessionTokenService {
-
-    private static final String HMAC_ALGORITHM = "HmacSHA256";
     private final byte[] secret;
-    private final OneProperties properties;
-    private final Clock clock;
+    private final long ttlSeconds;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    public SessionTokenService(OneProperties properties) {
-        this(properties, Clock.systemUTC());
+    public SessionTokenService(OneProperties properties, ObjectMapper objectMapper) {
+        this.secret = properties.tokenSecret().getBytes(StandardCharsets.UTF_8);
+        if (secret.length < 32) throw new IllegalStateException("ONE_TOKEN_SECRET must contain at least 32 bytes");
+        this.ttlSeconds = properties.tokenTtl().toSeconds();
+        this.objectMapper = objectMapper;
     }
 
-    SessionTokenService(OneProperties properties, Clock clock) {
-        if (properties.security().tokenSecret() == null
-                || properties.security().tokenSecret().getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalStateException("ONE_TOKEN_SECRET must contain at least 32 bytes");
-        }
-        this.secret = properties.security().tokenSecret().getBytes(StandardCharsets.UTF_8);
-        this.properties = properties;
-        this.clock = clock;
-    }
-
-    public String issue(long userId, UserRole role) {
-        long expiresAt = Instant.now(clock).plus(properties.security().tokenTtl()).getEpochSecond();
-        String payload = userId + ":" + role.name() + ":" + expiresAt;
-        String encodedPayload = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
-        return encodedPayload + "." + sign(encodedPayload);
-    }
-
-    public Optional<OnePrincipal> verify(String token) {
+    public String issue(long userId) {
         try {
-            String[] parts = token.split("\\.", -1);
-            if (parts.length != 2 || !MessageDigest.isEqual(
-                    sign(parts[0]).getBytes(StandardCharsets.US_ASCII),
-                    parts[1].getBytes(StandardCharsets.US_ASCII))) {
-                return Optional.empty();
-            }
-            String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
-            String[] claims = payload.split(":", -1);
-            if (claims.length != 3 || Long.parseLong(claims[2]) <= Instant.now(clock).getEpochSecond()) {
-                return Optional.empty();
-            }
-            return Optional.of(new OnePrincipal(Long.parseLong(claims[0]), UserRole.valueOf(claims[1])));
-        } catch (RuntimeException exception) {
-            return Optional.empty();
+            String payload = encode(objectMapper.writeValueAsBytes(
+                    new TokenPayload(userId, Instant.now().plusSeconds(ttlSeconds).getEpochSecond())));
+            return payload + "." + encode(sign(payload));
+        } catch (Exception error) {
+            throw new IllegalStateException("Unable to issue token", error);
         }
     }
 
-    private String sign(String value) {
+    public OnePrincipal verify(String token) {
         try {
-            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
-            mac.init(new SecretKeySpec(secret, HMAC_ALGORITHM));
-            return Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception exception) {
-            throw new IllegalStateException("Cannot sign session token", exception);
+            String[] parts = token.split("\\.");
+            if (parts.length != 2 || !java.security.MessageDigest.isEqual(sign(parts[0]), decode(parts[1]))) return null;
+            TokenPayload payload = objectMapper.readValue(decode(parts[0]), TokenPayload.class);
+            return payload.expiresAt() >= Instant.now().getEpochSecond() ? new OnePrincipal(payload.userId()) : null;
+        } catch (Exception ignored) {
+            return null;
         }
     }
+
+    private byte[] sign(String payload) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+        return mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String encode(byte[] value) { return Base64.getUrlEncoder().withoutPadding().encodeToString(value); }
+    private byte[] decode(String value) { return Base64.getUrlDecoder().decode(value); }
+    private record TokenPayload(long userId, long expiresAt) {}
 }

@@ -1,30 +1,27 @@
 {
   "pages": [
     "pages/home/index",
-    "pages/detail/index",
-    "pages/publish/index",
-    "pages/trips/index",
+    "pages/calendar/index",
     "pages/profile/index",
-    "pages/checkin/index",
-    "pages/search/index"
+    "pages/record/index"
   ],
   "window": {
     "navigationStyle": "custom",
     "backgroundColor": "#FCF9F8",
-    "backgroundTextStyle": "dark"
+    "backgroundTextStyle": "light"
   },
   "tabBar": {
     "custom": true,
     "color": "#9A8E8A",
     "selectedColor": "#F8A4A8",
-    "backgroundColor": "#FCF9F8",
+    "backgroundColor": "#FFFFFF",
     "list": [
-      { "pagePath": "pages/home/index", "text": "发现" },
-      { "pagePath": "pages/publish/index", "text": "发起" },
-      { "pagePath": "pages/trips/index", "text": "行程" },
+      { "pagePath": "pages/home/index", "text": "转一转" },
+      { "pagePath": "pages/calendar/index", "text": "日历" },
       { "pagePath": "pages/profile/index", "text": "我的" }
     ]
   },
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
 }

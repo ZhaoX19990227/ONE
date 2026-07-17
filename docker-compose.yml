@@ -1,64 +1,56 @@
-name: one
-
 services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-one}
-      MYSQL_USER: ${MYSQL_USER:-one}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-one-local-password}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-local-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: Asia/Shanghai
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_0900_ai_ci
-      - --default-time-zone=+08:00
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root-local-password}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
     networks: [one-internal]
 
   server:
-    build:
-      context: ./server
+    build: ./server
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-one}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-      DB_USERNAME: ${MYSQL_USER:-one}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-one-local-password}
-      ONE_TOKEN_SECRET: ${ONE_TOKEN_SECRET:-local-development-secret-must-be-32-chars}
-      ONE_ADMIN_USERNAME: ${ONE_ADMIN_USERNAME:-one-admin}
-      ONE_ADMIN_PASSWORD: ${ONE_ADMIN_PASSWORD:-local-admin-password}
-      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
-      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
-      WECHAT_MOCK_ENABLED: ${WECHAT_MOCK_ENABLED:-true}
-      ONE_DEMO_DATA_ENABLED: ${ONE_DEMO_DATA_ENABLED:-true}
-      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65 -XX:+UseG1GC -Dfile.encoding=UTF-8
-      TZ: Asia/Shanghai
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-10}
+      ONE_TOKEN_SECRET: ${ONE_TOKEN_SECRET}
+      ONE_TOKEN_TTL: ${ONE_TOKEN_TTL:-PT720H}
+      WECHAT_MOCK_ENABLED: ${WECHAT_MOCK_ENABLED:-false}
+      WECHAT_APP_ID: ${WECHAT_APP_ID}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET}
+      QWEN_ENABLED: ${QWEN_ENABLED:-true}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      DASHSCOPE_WORKSPACE_ID: ${DASHSCOPE_WORKSPACE_ID}
+      QWEN_VISION_MODEL: ${QWEN_VISION_MODEL:-qwen3.6-flash}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-}
+      QWEN_TIMEOUT: ${QWEN_TIMEOUT:-PT30S}
+      ONE_UPLOAD_ROOT: /data/uploads
+      ONE_MEDIA_BASE_URL: ${ONE_MEDIA_BASE_URL}
+      ONE_MAX_IMAGE_BYTES: ${ONE_MAX_IMAGE_BYTES:-10485760}
+    volumes:
+      - media-data:/data
     depends_on:
       mysql:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:8080:8080"
-    networks: [one-internal]
-
-  admin-web:
-    build:
-      context: ./admin-web
-    restart: unless-stopped
-    profiles: [production]
     networks: [one-internal]
 
   caddy:
     image: caddy:2.10-alpine
     restart: unless-stopped
-    profiles: [production]
     environment:
       ONE_DOMAIN: ${ONE_DOMAIN}
     ports:
@@ -69,14 +61,14 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    depends_on: [server, admin-web]
+    depends_on: [server]
     networks: [one-internal]
-
-volumes:
-  mysql-data:
-  caddy-data:
-  caddy-config:
 
 networks:
   one-internal:
-    driver: bridge
+
+volumes:
+  mysql-data:
+  media-data:
+  caddy-data:
+  caddy-config:

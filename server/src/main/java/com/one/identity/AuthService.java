@@ -1,73 +1,34 @@
 package com.one.identity;
 
-import com.one.common.BusinessException;
 import com.one.config.OneProperties;
 import com.one.security.SessionTokenService;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-
 @Service
 public class AuthService {
-
-    private final WechatIdentityClient wechatIdentityClient;
-    private final UserAccountRepository userRepository;
-    private final SessionTokenService tokenService;
+    private final UserAccountRepository users;
+    private final SessionTokenService tokens;
     private final OneProperties properties;
+    private final WechatCode2SessionClient wechatClient;
 
-    public AuthService(WechatIdentityClient wechatIdentityClient, UserAccountRepository userRepository,
-                       SessionTokenService tokenService, OneProperties properties) {
-        this.wechatIdentityClient = wechatIdentityClient;
-        this.userRepository = userRepository;
-        this.tokenService = tokenService;
+    public AuthService(UserAccountRepository users, SessionTokenService tokens, OneProperties properties,
+                       WechatCode2SessionClient wechatClient) {
+        this.users = users;
+        this.tokens = tokens;
         this.properties = properties;
+        this.wechatClient = wechatClient;
     }
 
     @Transactional
     public LoginResult login(String code) {
-        WechatIdentityClient.WechatSession session = wechatIdentityClient.exchangeCode(code);
-        UserAccount user = userRepository.findByOpenId(session.openId())
-                .orElseGet(() -> userRepository.save(UserAccount.create(session.openId(), "新朋友")));
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new BusinessException("ACCOUNT_UNAVAILABLE", "账号暂时无法使用", HttpStatus.FORBIDDEN);
-        }
-        return new LoginResult(tokenService.issue(user.getId(), user.getRole()), UserView.from(user));
+        String openId = properties.wechatMockEnabled()
+                ? properties.demoOpenId() + ":" + Integer.toHexString(code.hashCode())
+                : wechatClient.resolveOpenId(code);
+        UserAccount user = users.findByOpenId(openId)
+                .orElseGet(() -> users.save(UserAccount.create(openId, "ONE群友")));
+        return new LoginResult(tokens.issue(user.getId()), user.getId(), user.getNickname(), user.getAvatarUrl());
     }
 
-    @Transactional
-    public LoginResult adminLogin(String username, String password) {
-        OneProperties.Admin configured = properties.admin();
-        if (!constantTimeEquals(configured.username(), username)
-                || !constantTimeEquals(configured.password(), password)) {
-            throw new BusinessException("ADMIN_LOGIN_FAILED", "管理员账号或密码错误", HttpStatus.UNAUTHORIZED);
-        }
-        String openId = "admin:" + configured.username();
-        UserAccount user = userRepository.findByOpenId(openId)
-                .orElseGet(() -> userRepository.save(UserAccount.create(openId, "ONE 运营")));
-        if (user.getRole() != UserRole.ADMIN) {
-            user.grantRole(UserRole.ADMIN);
-        }
-        return new LoginResult(tokenService.issue(user.getId(), UserRole.ADMIN), UserView.from(user));
-    }
-
-    private boolean constantTimeEquals(String expected, String actual) {
-        if (expected == null || actual == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
-                actual.getBytes(StandardCharsets.UTF_8));
-    }
-
-    public record LoginResult(String token, UserView user) {
-    }
-
-    public record UserView(Long id, String nickname, String avatarUrl, String cityName, String role) {
-        static UserView from(UserAccount user) {
-            return new UserView(user.getId(), user.getNickname(), user.getAvatarUrl(),
-                    user.getCityName(), user.getRole().name());
-        }
-    }
+    public record LoginResult(String token, long userId, String nickname, String avatarUrl) {}
 }

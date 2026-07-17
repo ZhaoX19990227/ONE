@@ -1,0 +1,4 @@
+export type Dimension = 'MEAL' | 'MILK_TEA' | 'COFFEE' | 'PRIVATE_HABIT'
+export interface RecordView { id: number; type: Dimension; occurredAt: string; title: string; brandName?: string; brandShortName?: string; brandColor?: string; brandLogoUrl?: string; thumbnailUrl?: string; actualAmountFen?: number; feedback?: string; ordinalOfDay?: number; deerMessage?: string }
+export interface Candidate { id: number; itemId: number; itemName: string; brandName?: string; brandShortName?: string; brandColor?: string; brandLogoUrl?: string; defaultPriceFen?: number; reason: string; suggestionJson?: string; chosen: boolean }
+export interface Recommendation { sessionId: number; dimension: Dimension; mode: 'SPIN' | 'SMART'; timeSlot: string; status: string; openingLine: string; chosenCandidateId?: number; candidates: Candidate[] }

@@ -1,38 +1,25 @@
-<view class="page-shell profile-page">
-  <view class="profile-hero">
-    <view class="hero-orb hero-orb--one"></view><view class="hero-orb hero-orb--two"></view>
-    <view class="profile-nav safe-top"><text>PROFILE</text><view class="setting-icon" data-name="设置" bindtap="openSetting">···</view></view>
-    <view class="identity-block">
-      <view class="avatar-rings"><view class="avatar-core">林</view></view>
-      <text class="profile-name">林间来信</text>
-      <text class="profile-bio">认真生活，也认真玩。</text>
-      <view class="identity-badges"><text>18+ 已确认</text><text>上海</text></view>
-    </view>
+<view class="page theme-{{theme}}">
+  <view class="orb orb-a"></view><view class="orb orb-b"></view>
+  <view class="nav"><view class="logo">ONE<view class="logo-dot"></view></view><view class="privacy-pill">仅自己可见</view></view>
+  <view class="profile-head">
+    <button class="avatar-button" open-type="chooseAvatar" bindchooseavatar="chooseAvatar"><image wx:if="{{avatarUrl}}" src="{{avatarUrl}}" mode="aspectFill"></image><view wx:else>O</view><text>＋</text></button>
+    <view class="name-wrap"><input type="nickname" value="{{nickname}}" bindinput="inputNickname" placeholder="你的昵称"/><view class="muted">让 ONE 从这些小细节开始懂你。</view></view>
   </view>
-
-  <view class="profile-content">
-    <view class="record-card glass-card">
-      <view wx:for="{{records}}" wx:key="label" class="record-item">
-        <text>{{item.value}}</text><text>{{item.label}}</text>
-      </view>
-    </view>
-
-    <view class="profile-section">
-      <view class="section-head"><view><text class="section-kicker">MY PASSPORT</text><text class="section-title">兴趣护照</text></view><text class="edit-link" bindtap="editProfile">编辑</text></view>
-      <view class="passport-card">
-        <view class="passport-mark"><view class="one-rings"></view><text>ONE / 0012</text></view>
-        <view class="tag-cloud"><text wx:for="{{tags}}" wx:key="*this">{{item}}</text></view>
-        <view class="availability"><text>通常有空</text><text>工作日晚间 · 周末下午</text></view>
-      </view>
-    </view>
-
-    <view class="profile-section menu-section">
-      <view class="menu-row" data-name="我的发起" bindtap="openSetting"><view><text class="menu-icon">◌</text><text>我的发起</text></view><text>›</text></view>
-      <view class="menu-row" data-name="收藏" bindtap="openSetting"><view><text class="menu-icon">♡</text><text>收藏的活动</text></view><text>›</text></view>
-      <view class="menu-row" data-name="隐私" bindtap="openSetting"><view><text class="menu-icon">◎</text><text>隐私与边界</text></view><text>›</text></view>
-      <view class="menu-row" data-name="安全中心" bindtap="openSetting"><view><text class="menu-icon">◇</text><text>安全中心</text></view><text>›</text></view>
-    </view>
-
-    <text class="profile-footnote">你不需要成为任何人的标准答案。</text>
+  <view class="section-title">关于你的一点点</view>
+  <view class="form-card glass">
+    <view class="inline-field"><view><text>身高</text><view class="muted">可选</view></view><view class="unit-input"><input type="number" value="{{heightCm}}" placeholder="—" bindinput="inputHeight"/><text>cm</text></view></view>
+    <view class="inline-field"><view><text>体重</text><view class="muted">可选</view></view><view class="unit-input"><input type="digit" value="{{weightKg}}" placeholder="—" bindinput="inputWeight"/><text>kg</text></view></view>
+    <view class="role-field"><view><text>属性</text><view class="muted">只用于自己的资料卡</view></view><view class="role-row"><view wx:for="{{[{v:'ONE',t:'1'},{v:'ZERO',t:'0'},{v:'VERS',t:'0.5'},{v:'SIDE',t:'side'}]}}" wx:key="v" class="role {{gayRole === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectRole">{{item.t}}</view></view></view>
   </view>
+  <view class="section-title">吃饭偏好</view><view class="tag-row"><view wx:for="{{mealOptions}}" wx:key="name" class="pill tag {{item.selected ? 'on' : ''}}" data-value="{{item.name}}" bindtap="toggleMeal">{{item.name}}</view></view>
+  <view class="section-title">喝点什么</view><view class="tag-row"><view wx:for="{{drinkOptions}}" wx:key="name" class="pill tag {{item.selected ? 'on' : ''}}" data-value="{{item.name}}" bindtap="toggleDrink">{{item.name}}</view></view>
+  <view class="section-title">我的节奏</view>
+  <view class="form-card glass">
+    <view class="inline-field"><view><text>每月吃喝预算</text><view class="muted">只做温柔提醒，不限制你</view></view><view class="unit-input budget"><text>¥</text><input type="number" value="{{monthlyBudgetYuan}}" placeholder="—" bindinput="inputBudget"/></view></view>
+    <view class="inline-field"><view><text>让 ONE 使用口味记忆</text><view class="muted">用于推荐与甜度提示</view></view><switch checked="{{aiEnabled}}" color="#F8A4A8" bindchange="toggleAi"/></view>
+    <view class="inline-field"><view><text>显示「鹿一下」</text><view class="muted">私密记录，不参与分享</view></view><switch checked="{{privateHabitEnabled}}" color="#7FC2C9" bindchange="toggleHabit"/></view>
+  </view>
+  <button class="primary-btn save" loading="{{saving}}" bindtap="save">保存我的 ONE</button>
+  <view class="privacy-note"><view class="rings"></view>你的资料、口味记忆与私密节奏默认只对自己可见。月报海报不会包含「鹿一下」数据。</view>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
 </view>
