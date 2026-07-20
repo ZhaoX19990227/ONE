@@ -1,0 +1,9 @@
+<view wx:if="{{visible}}" class="one-overlay-mask one-mask-motion" bindtap="cancel"></view>
+<view wx:if="{{visible}}" class="one-action-sheet one-sheet-motion" catchtap="swallow">
+  <view class="one-sheet-handle"></view>
+  <view wx:if="{{title}}" class="one-sheet-title">{{title}}</view>
+  <view class="one-sheet-items">
+    <view wx:for="{{items}}" wx:key="*this" class="one-sheet-item {{dangerIndex === index ? 'danger' : ''}}" data-index="{{index}}" bindtap="choose">{{item}}</view>
+  </view>
+  <view class="one-sheet-cancel" bindtap="cancel">取消</view>
+</view>

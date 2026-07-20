@@ -71,6 +71,7 @@
 - 微信 code 登录、Bearer Token、用户数据按 `userId` 隔离。
 - 记录软删除，保留审计数据；业务查询只读取 `CONFIRMED`。
 - Qwen3.6 模型、API 地址和密钥全部环境变量化；无密钥时安全降级到手动确认。
+- DeepSeek 仅增强记忆推荐的动态回应与三候选轻量重排；严格校验候选 ID、限制文案长度、短超时并自动回退本地推荐，普通转盘不依赖 AI。
 - Docker Compose + Caddy HTTPS，适合一台阿里云 ECS 的低成本首发。
 - 自定义品牌/产品归一化管理 API：批量合并同名待处理项、自动沉淀品牌别名，后续录入会直接命中标准目录。
 - 本地磁盘与阿里云 OSS 可配置切换；OSS 自动生成 320px WebP 处理地址，上传链路可接阿里云内容安全。
@@ -79,7 +80,7 @@
 ## 上线前仍需配置
 
 - 微信小程序 AppID/AppSecret、合法 request/uploadFile 域名与隐私协议。
-- DashScope API Key；建议先使用低成本模型，通过环境变量切换模型版本。
+- DashScope 与 DeepSeek API Key；建议先使用低成本模型，通过环境变量切换模型版本。
 - 公网 HTTPS 域名、Caddy 邮箱、MySQL 强密码、Token Secret。
 - 生产建议设置 `ONE_STORAGE_TYPE=oss` 并启用内容安全；RAM 权限只授予目标桶，不使用主账号 AccessKey。
 - 小程序审核文案与类目需要进一步确认，尤其是“鹿一下”的最终呈现。

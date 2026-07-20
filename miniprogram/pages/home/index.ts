@@ -3,10 +3,11 @@ import { request } from '../../utils/request'
 import { Candidate, Dimension, Recommendation, RecordView } from '../../models/types'
 import { ProfileView } from '../../models/types'
 import { showRecordActions } from '../../utils/record-actions'
+import { oneActionSheet } from '../../utils/overlay'
 
 interface HomeData {
   theme: ThemeName; greeting: string; dimension: Dimension; records: RecordView[];
-  loading: boolean; recommendation?: Recommendation; selected?: Candidate; spinning: boolean;
+  loading: boolean; recommendation?: Recommendation; selected?: Candidate; spinning: boolean; choosing: boolean;
   wheelStyle: string; wheelBackground: string; wheelSegments: Array<{ label: string; style: string }>;
   toast: string; deerBurst: boolean; todayAmountFen: number;
   memoryEnabled: boolean; privateHabitEnabled: boolean
@@ -14,9 +15,13 @@ interface HomeData {
 
 Page<HomeData, WechatMiniprogram.Page.CustomOption>({
   data: { theme: 'noon', greeting: '', dimension: 'MEAL', records: [], loading: false,
-    recommendation: undefined, selected: undefined, spinning: false, wheelStyle: 'transform:rotate(0deg)',
+    recommendation: undefined, selected: undefined, spinning: false, choosing: false, wheelStyle: 'transform:rotate(0deg)',
     wheelBackground: '', wheelSegments: [], toast: '', deerBurst: false,
     todayAmountFen: 0, memoryEnabled: true, privateHabitEnabled: true },
+  spinTimer: 0 as unknown as ReturnType<typeof setTimeout>,
+  spinToken: 0,
+  choiceToken: 0,
+  wheelRotation: 0,
   onShow() {
     const theme = currentTheme()
     this.setData({ theme, greeting: greeting(theme) })
@@ -25,6 +30,8 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
     Promise.all([this.loadToday(), this.loadPreferences()])
   },
   onPullDownRefresh() { Promise.all([this.loadToday(), this.loadPreferences()]).finally(() => wx.stopPullDownRefresh()) },
+  onHide() { this.cancelSpin() },
+  onUnload() { this.cancelSpin() },
   async loadToday() {
     try {
       const values = await request<RecordView[]>('/records/today')
@@ -50,6 +57,7 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
   selectDrink(event: WechatMiniprogram.TouchEvent) {
     this.setData({ dimension: event.currentTarget.dataset.value as Dimension })
   },
+  swallow() { /* 阻止推荐面板点击穿透 */ },
   async recommend(event: WechatMiniprogram.TouchEvent) {
     const mode = event.currentTarget.dataset.mode as 'SPIN' | 'SMART'
     if (this.data.dimension === 'PRIVATE_HABIT') { await this.recordDeer(); return }
@@ -62,17 +70,39 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
   },
   startSpin(result: Recommendation) {
     if (!result.candidates.length) return
+    this.cancelSpin(false)
     const winnerIndex = Math.max(0, result.candidates.findIndex(value => value.id === result.winnerCandidateId))
     const slice = 360 / result.candidates.length
     const targetCenter = winnerIndex * slice + slice / 2
-    const degrees = 1800 + (360 - targetCenter)
-    this.setData({ spinning: true, selected: undefined, wheelStyle: 'transform:rotate(0deg)' })
-    setTimeout(() => this.setData({ wheelStyle: `transform:rotate(${degrees}deg)` }), 40)
-    setTimeout(() => {
-      wx.vibrateShort({ type: 'light' })
-      this.chooseCandidate(result.candidates[winnerIndex])
-      this.setData({ spinning: false })
-    }, 2880)
+    const current = ((this.wheelRotation % 360) + 360) % 360
+    const delta = (360 - targetCenter - current + 360) % 360
+    this.wheelRotation += 1800 + delta
+    const token = ++this.spinToken
+    this.setData({ spinning: true, selected: undefined })
+    wx.nextTick(() => {
+      if (token !== this.spinToken) return
+      this.setData({ wheelStyle: `transform:translateZ(0) rotate(${this.wheelRotation}deg)` })
+    })
+    this.spinTimer = setTimeout(() => this.finishSpin(token, result, winnerIndex), 3000)
+  },
+  wheelTransitionEnd() {
+    const result = this.data.recommendation
+    if (!this.data.spinning || !result) return
+    const winnerIndex = Math.max(0, result.candidates.findIndex(value => value.id === result.winnerCandidateId))
+    this.finishSpin(this.spinToken, result, winnerIndex)
+  },
+  finishSpin(token: number, result: Recommendation, winnerIndex: number) {
+    if (token !== this.spinToken || !this.data.spinning) return
+    clearTimeout(this.spinTimer)
+    wx.vibrateShort({ type: 'light' })
+    void this.chooseCandidate(result.candidates[winnerIndex], token).finally(() => {
+      if (token === this.spinToken) this.setData({ spinning: false })
+    })
+  },
+  cancelSpin(invalidate = true) {
+    clearTimeout(this.spinTimer)
+    if (invalidate) this.spinToken += 1
+    if (this.data.spinning) this.setData({ spinning: false })
   },
   presentRecommendation(result: Recommendation, autoSpin = false) {
     const colors = ['#F8A4A8', '#F3D0CE', '#7FC2C9', '#D6E8E6', '#E8B9BE', '#F0DED5', '#96C9CD', '#F7C4B9']
@@ -83,13 +113,12 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
       label: candidate.brandShortName || candidate.itemName.slice(0, 4),
       style: `transform:rotate(${index * slice + slice / 2}deg) translateY(-112rpx) rotate(${-index * slice - slice / 2}deg)`
     }))
-    this.setData({ recommendation: result, selected: undefined, wheelBackground, wheelSegments,
-      wheelStyle: 'transform:rotate(0deg)' })
+    this.setData({ recommendation: result, selected: undefined, wheelBackground, wheelSegments })
     if (autoSpin) this.startSpin(result)
   },
   async refreshRecommendation() {
     const session = this.data.recommendation
-    if (!session || this.data.spinning) return
+    if (!session || this.data.spinning || this.data.choosing) return
     this.setData({ loading: true })
     try {
       const result = await request<Recommendation>(`/recommendations/${session.sessionId}/refresh`, 'POST')
@@ -97,27 +126,27 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
     } catch (error) { this.showToast((error as Error).message) }
     finally { this.setData({ loading: false }) }
   },
-  dismissCandidate(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.spinning) return
+  async dismissCandidate(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.spinning || this.data.choosing) return
     const candidate = this.data.recommendation?.candidates[Number(event.currentTarget.dataset.index)]
     if (!candidate) return
     const reasons = this.data.dimension === 'MEAL' ? ['今天不想吃这个', '最近吃过了', '这次有点贵']
       : ['今天不想喝这个', '最近喝过了', '这次有点贵']
-    wx.showActionSheet({ itemList: reasons, success: async ({ tapIndex }) => {
-      const session = this.data.recommendation
-      if (!session) return
-      this.setData({ loading: true })
-      try {
-        const result = await request<Recommendation>(`/recommendations/${session.sessionId}/candidates/${candidate.id}/dismiss`, 'POST', { reason: reasons[tapIndex] })
-        this.presentRecommendation(result, result.mode === 'SPIN')
-        this.showToast('收到，这两周会少出现一点')
-      } catch (error) { this.showToast((error as Error).message) }
-      finally { this.setData({ loading: false }) }
-    } })
+    const tapIndex = await oneActionSheet(this, { title: '这次为什么不想要？', items: reasons })
+    if (tapIndex === undefined) return
+    const session = this.data.recommendation
+    if (!session) return
+    this.setData({ loading: true })
+    try {
+      const result = await request<Recommendation>(`/recommendations/${session.sessionId}/candidates/${candidate.id}/dismiss`, 'POST', { reason: reasons[tapIndex] })
+      this.presentRecommendation(result, result.mode === 'SPIN')
+      this.showToast('收到，这两周会少出现一点')
+    } catch (error) { this.showToast((error as Error).message) }
+    finally { this.setData({ loading: false }) }
   },
   async createRoom() {
     const recommendation = this.data.recommendation
-    if (!recommendation || recommendation.candidates.length < 2 || this.data.spinning) return
+    if (!recommendation || recommendation.candidates.length < 2 || this.data.spinning || this.data.choosing) return
     this.setData({ loading: true })
     try {
       const room = await request<{ shareCode: string }>('/rooms', 'POST', {
@@ -131,17 +160,22 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
     finally { this.setData({ loading: false }) }
   },
   tapCandidate(event: WechatMiniprogram.TouchEvent) {
-    if (this.data.spinning) return
+    if (this.data.spinning || this.data.choosing) return
     const candidate = this.data.recommendation?.candidates[Number(event.currentTarget.dataset.index)]
     if (candidate) this.chooseCandidate(candidate)
   },
-  async chooseCandidate(candidate: Candidate) {
+  async chooseCandidate(candidate: Candidate, spinToken?: number) {
     const session = this.data.recommendation
-    if (!session) return
+    if (!session || this.data.choosing) return
+    const choiceToken = ++this.choiceToken
+    this.setData({ choosing: true })
     try {
       const result = await request<Recommendation>(`/recommendations/${session.sessionId}/candidates/${candidate.id}/choose`, 'POST')
+      if (choiceToken !== this.choiceToken || (spinToken !== undefined && spinToken !== this.spinToken)
+          || this.data.recommendation?.sessionId !== session.sessionId) return
       this.setData({ recommendation: result, selected: result.candidates.find(value => value.id === candidate.id) })
     } catch (error) { this.showToast((error as Error).message) }
+    finally { if (choiceToken === this.choiceToken) this.setData({ choosing: false }) }
   },
   recordSelected() {
     const session = this.data.recommendation; const candidate = this.data.selected
@@ -167,10 +201,16 @@ Page<HomeData, WechatMiniprogram.Page.CustomOption>({
     } catch (error) { this.showToast((error as Error).message) }
     finally { this.setData({ loading: false }) }
   },
-  closeRecommendation() { this.setData({ recommendation: undefined, selected: undefined, wheelStyle: 'transform:rotate(0deg)', wheelSegments: [] }) },
+  closeRecommendation() {
+    this.cancelSpin()
+    this.choiceToken += 1
+    this.wheelRotation = 0
+    this.setData({ recommendation: undefined, selected: undefined, choosing: false,
+      wheelStyle: 'transform:translateZ(0) rotate(0deg)', wheelSegments: [] })
+  },
   recordActions(event: WechatMiniprogram.TouchEvent) {
     const record = this.data.records[Number(event.currentTarget.dataset.index)]
-    if (record) showRecordActions(record, () => this.loadToday())
+    if (record) void showRecordActions(this, record, () => this.loadToday())
   },
   showToast(message: string) { this.setData({ toast: message }); setTimeout(() => this.setData({ toast: '' }), 2200) }
 })

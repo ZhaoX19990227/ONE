@@ -2,6 +2,7 @@ import { currentTheme, ThemeName } from '../../utils/theme'
 import { request } from '../../utils/request'
 import { ProfileView, RecordView } from '../../models/types'
 import { showRecordActions } from '../../utils/record-actions'
+import { oneDialog } from '../../utils/overlay'
 
 interface DayCell { date: string; day?: number; empty?: boolean; totalCount: number; mealCount: number; milkTeaCount: number; coffeeCount: number; privateHabitCount: number; amountFen: number; coverUrl?: string; moodText?: string }
 interface MonthView { month: string; activeDays: number; totalCount: number; totalAmountFen: number; days: DayCell[] }
@@ -13,7 +14,7 @@ Page({
     totalAmountFen: 0, selectedDate: '', dayRecords: [] as RecordView[], summary: undefined as Summary | undefined,
     dimensionCards: [] as Array<{dimension:string;label:string;count:number;amountFen:number}>,
     topBrands: [] as Array<Summary['topBrands'][number] & {shortName:string}>, monthlyBudgetFen: 0, budgetPercent: 0, budgetText: '',
-    weekly: undefined as Weekly | undefined, posterPath: '', posterVisible: false, posterTitle: '', loading: false },
+    weekly: undefined as Weekly | undefined, posterPath: '', posterVisible: false, posterTitle: '', loading: false, toast: '' },
   onShow() {
     const tab = this.getTabBar?.(); if (tab) tab.setData({ selected: 1 })
     this.setData({ theme: currentTheme() })
@@ -52,7 +53,7 @@ Page({
       this.setData({ cells: placeholders.concat(calendar.days.map((day, index) => ({ ...day, day: index + 1 }))),
         activeDays: calendar.activeDays, totalAmountFen: calendar.totalAmountFen, summary,
         dimensionCards: dimensions, topBrands: summary.topBrands.slice(0, 5).map(value => ({ ...value, shortName: value.brandName.substring(0, 1) })), monthlyBudgetFen: budget, budgetPercent, budgetText, weekly })
-    } catch (error) { wx.showToast({ title: (error as Error).message, icon: 'none' }) }
+    } catch (error) { this.showToast((error as Error).message) }
     finally { this.setData({ loading: false }) }
   },
   async selectDay(event: WechatMiniprogram.TouchEvent) {
@@ -111,17 +112,17 @@ Page({
   savePoster() {
     if (!this.data.posterPath) return
     wx.saveImageToPhotosAlbum({ filePath: this.data.posterPath,
-      success: () => wx.showToast({ title: '报告已保存', icon: 'success' }),
-      fail: error => {
+      success: () => this.showToast('报告已保存到相册'),
+      fail: async error => {
         if ((error.errMsg || '').includes('auth deny')) {
-          wx.showModal({ title: '需要相册权限', content: '在设置中允许保存到相册，就能留下这张月报。',
-            confirmText: '去设置', success: result => { if (result.confirm) wx.openSetting() } })
-        } else wx.showToast({ title: '保存失败，请再试一次', icon: 'none' })
+          const confirmed = await oneDialog(this, { title: '需要相册权限', content: '在设置中允许保存到相册，就能留下这张月报。', confirmText: '去设置' })
+          if (confirmed) wx.openSetting()
+        } else this.showToast('保存失败，请再试一次')
       } })
   },
   recordActions(event: WechatMiniprogram.TouchEvent) {
     const record = this.data.dayRecords[Number(event.currentTarget.dataset.index)]
-    if (record) showRecordActions(record, () => this.selectDayByDate(this.data.selectedDate))
+    if (record) void showRecordActions(this, record, () => this.selectDayByDate(this.data.selectedDate))
   },
   async selectDayByDate(date: string) {
     if (!date) return
@@ -130,5 +131,6 @@ Page({
   },
   roundRect(ctx: WechatMiniprogram.CanvasContext, x:number,y:number,w:number,h:number,r:number) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath() },
   wrapText(ctx: WechatMiniprogram.CanvasContext, text:string,x:number,y:number,max:number,line:number) { let current=''; let row=0; for(const char of text){ if(ctx.measureText(current+char).width>max){ctx.fillText(current,x,y+row*line);current=char;row++}else current+=char} if(current)ctx.fillText(current,x,y+row*line) },
+  showToast(message: string) { this.setData({ toast: message }); setTimeout(() => this.setData({ toast: '' }), 2200) },
   onShareAppMessage() { return { title: `${this.data.month}月，我在 ONE 留下了 ${this.data.activeDays} 天生活切片`, path: '/pages/home/index', imageUrl: this.data.posterPath || undefined } }
 })

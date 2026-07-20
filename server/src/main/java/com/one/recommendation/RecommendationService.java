@@ -35,14 +35,16 @@ public class RecommendationService {
     private final UserAccountRepository users;
     private final RecommendationFeedbackRepository feedback;
     private final ObjectMapper objectMapper;
+    private final RecommendationAiAdvisor aiAdvisor;
 
     public RecommendationService(DecisionSessionRepository sessions, DecisionCandidateRepository candidates,
                                  CatalogItemRepository items, PreferenceMemoryRepository memories,
                                  UserAccountRepository users,
                                  RecommendationFeedbackRepository feedback,
-                                 ObjectMapper objectMapper) {
+                                 ObjectMapper objectMapper, RecommendationAiAdvisor aiAdvisor) {
         this.sessions = sessions; this.candidates = candidates; this.items = items;
         this.memories = memories; this.users = users; this.feedback = feedback; this.objectMapper = objectMapper;
+        this.aiAdvisor = aiAdvisor;
     }
 
     @Transactional
@@ -74,6 +76,18 @@ public class RecommendationService {
         int limit = request.mode() == DecisionMode.SPIN ? Math.min(8, catalog.size()) : Math.min(3, catalog.size());
         List<ScoredItem> selected = catalog.stream().map(item -> score(item, memoryList, preferenceTags, timeSlot))
                 .sorted(Comparator.comparingInt(ScoredItem::score).reversed()).limit(limit).toList();
+        String openingLine = openingLine(request.mode(), timeSlot);
+        if (request.mode() == DecisionMode.SMART && memoryEnabled) {
+            RecommendationAiAdvisor.Advice advice = aiAdvisor.advise(request.dimension(), timeSlot,
+                    selected.stream().map(value -> new RecommendationAiAdvisor.Option(value.item().getId(),
+                            value.item().getName(), value.item().getBrand() == null ? null : value.item().getBrand().getName(),
+                            value.reason())).toList()).orElse(null);
+            if (advice != null) {
+                selected = applyAdvice(selected, advice);
+                openingLine = advice.openingLine();
+            }
+        }
+        session.updateContextJson(objectMapper.writeValueAsString(Map.of("openingLine", openingLine)));
         List<DecisionCandidate> saved = new ArrayList<>();
         for (int index = 0; index < selected.size(); index++) {
             ScoredItem selectedItem = selected.get(index);
@@ -242,7 +256,29 @@ public class RecommendationService {
         }).toList();
         return new RecommendationDtos.View(session.getId(), session.getDimension(), session.getMode(),
                 session.getTimeSlot(), session.getStatus(), session.getWinnerCandidateId(), session.getChosenCandidateId(),
-                openingLine(session.getMode(), session.getTimeSlot()), views);
+                openingLine(session), views);
+    }
+
+    private List<ScoredItem> applyAdvice(List<ScoredItem> selected, RecommendationAiAdvisor.Advice advice) {
+        Map<Long, ScoredItem> byItemId = selected.stream().collect(java.util.stream.Collectors.toMap(
+                value -> value.item().getId(), value -> value));
+        List<ScoredItem> result = new ArrayList<>();
+        for (RecommendationAiAdvisor.RankedItem ranked : advice.items()) {
+            ScoredItem value = byItemId.remove(ranked.itemId());
+            if (value != null) result.add(new ScoredItem(value.item(), value.score(), ranked.reason(), value.memory()));
+        }
+        selected.stream().filter(value -> byItemId.containsKey(value.item().getId())).forEach(result::add);
+        return result;
+    }
+
+    private String openingLine(DecisionSession session) {
+        try {
+            String value = objectMapper.readTree(session.getContextJson()).path("openingLine").stringValue();
+            if (value != null && !value.isBlank()) return value;
+        } catch (Exception ignored) {
+            // 兼容历史会话和异常上下文，回退到确定性文案。
+        }
+        return openingLine(session.getMode(), session.getTimeSlot());
     }
 
     private String openingLine(DecisionMode mode, TimeSlot slot) {

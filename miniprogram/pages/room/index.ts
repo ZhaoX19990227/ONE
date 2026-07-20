@@ -1,6 +1,7 @@
 import { GroupRoom } from '../../models/types'
 import { request } from '../../utils/request'
 import { currentTheme, ThemeName } from '../../utils/theme'
+import { oneDialog } from '../../utils/overlay'
 
 interface RoomData {
   theme: ThemeName
@@ -41,16 +42,15 @@ Page<RoomData, WechatMiniprogram.Page.CustomOption>({
       this.setData({ room })
     } catch (error) { this.showToast((error as Error).message) }
   },
-  closeRoom() {
-    wx.showModal({ title: '现在揭晓吗？', content: '会以当前票数选出大家的 ONE，结束后不能再投票。', confirmText: '揭晓', success: async result => {
-      if (!result.confirm) return
-      try {
-        const room = await request<GroupRoom>(`/rooms/${this.data.code}/close`, 'POST')
-        this.setData({ room })
-        wx.vibrateShort({ type: 'medium' })
-        this.showToast('答案出现了 ✨')
-      } catch (error) { this.showToast((error as Error).message) }
-    } })
+  async closeRoom() {
+    const confirmed = await oneDialog(this, { title: '现在揭晓吗？', content: '会以当前票数选出大家的 ONE，结束后不能再投票。', confirmText: '揭晓' })
+    if (!confirmed) return
+    try {
+      const room = await request<GroupRoom>(`/rooms/${this.data.code}/close`, 'POST')
+      this.setData({ room })
+      wx.vibrateShort({ type: 'medium' })
+      this.showToast('答案出现了 ✨')
+    } catch (error) { this.showToast((error as Error).message) }
   },
   shareRoom() { wx.showShareMenu({ menus: ['shareAppMessage'] }); this.showToast('点右上角，发到群里一起选') },
   onShareAppMessage() {

@@ -67,6 +67,8 @@ public class DecisionSession extends AuditedEntity {
     public DecisionMode getMode() { return mode; }
     public TimeSlot getTimeSlot() { return timeSlot; }
     public Integer getBudgetMaxFen() { return budgetMaxFen; }
+    public String getContextJson() { return contextJson; }
+    public void updateContextJson(String contextJson) { this.contextJson = contextJson; }
     public Long getWinnerCandidateId() { return winnerCandidateId; }
     public Long getChosenCandidateId() { return chosenCandidateId; }
     public DecisionStatus getStatus() { return status; }

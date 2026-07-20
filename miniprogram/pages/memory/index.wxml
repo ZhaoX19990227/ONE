@@ -16,4 +16,6 @@
   </view>
   <view wx:else class="empty glass"><view class="rings"></view>还没有需要特别记住的口味。<br/>当你说“有点甜”或“还会再来”，记忆会出现在这里。</view>
   <view class="memory-note">ONE 不会从「鹿一下」生成记忆，也不会把这里的内容放进分享海报。</view>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+  <one-dialog id="one-dialog" />
 </view>

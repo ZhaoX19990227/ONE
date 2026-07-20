@@ -37,4 +37,7 @@
   <canvas canvas-id="poster" class="poster-canvas"></canvas>
   <view wx:if="{{posterVisible}}" class="poster-mask" bindtap="closePoster"></view>
   <view wx:if="{{posterVisible}}" class="poster-sheet glass"><view class="sheet-handle"></view><view class="poster-title">{{posterTitle}}</view><image src="{{posterPath}}" mode="widthFix"></image><view class="poster-actions"><button class="ghost-btn" bindtap="savePoster">保存相册</button><button class="primary-btn" open-type="share">发给群友</button></view></view>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+  <one-dialog id="one-dialog" />
+  <one-action-sheet id="one-action-sheet" />
 </view>

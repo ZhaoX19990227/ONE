@@ -4,7 +4,7 @@
   <view class="photo-card glass" bindtap="choosePhoto">
     <image wx:if="{{imageUrl}}" src="{{imageUrl}}" mode="aspectFill"></image>
     <view wx:else class="photo-empty"><view class="camera-ring">⌾</view><view>拍照，让 ONE 先认一认</view><view class="muted">也可以从相册选择</view></view>
-    <view wx:if="{{recognizing}}" class="recognizing"><view class="rings"></view><text>Qwen 正在看这张照片…</text></view>
+    <view wx:if="{{recognizing}}" class="recognizing"><view class="rings"></view><text>ONE 正在看这张照片…</text></view>
   </view>
 
   <view wx:if="{{candidates.length}}" class="form-section">

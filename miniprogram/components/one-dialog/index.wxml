@@ -1,0 +1,10 @@
+<view wx:if="{{visible}}" class="one-overlay-mask one-mask-motion" bindtap="cancel"></view>
+<view wx:if="{{visible}}" class="one-dialog" catchtap="swallow">
+  <view class="one-dialog-rings"><view></view><view></view></view>
+  <view class="one-dialog-title">{{title}}</view>
+  <view wx:if="{{content}}" class="one-dialog-content">{{content}}</view>
+  <view class="one-dialog-actions">
+    <button class="one-dialog-button cancel" bindtap="cancel">{{cancelText}}</button>
+    <button class="one-dialog-button confirm {{danger ? 'danger' : ''}}" bindtap="confirm">{{confirmText}}</button>
+  </view>
+</view>

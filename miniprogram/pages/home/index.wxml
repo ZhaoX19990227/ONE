@@ -38,28 +38,30 @@
   <view wx:else class="empty glass"><view class="rings"></view>今天还没有留下记录<br/>第一口，从不纠结开始。</view>
 
   <view wx:if="{{recommendation}}" class="mask" bindtap="closeRecommendation"></view>
-  <view wx:if="{{recommendation}}" class="recommend-sheet glass">
+  <view wx:if="{{recommendation}}" class="recommend-sheet glass {{spinning ? 'is-spinning' : ''}}" catchtap="swallow">
     <view class="sheet-handle"></view><view class="sheet-close" bindtap="closeRecommendation">×</view>
     <view class="sheet-kicker">{{recommendation.mode === 'SPIN' ? 'LUCKY ONE' : 'JUST FOR YOU'}}</view>
     <view class="sheet-title">{{recommendation.openingLine}}</view>
     <view wx:if="{{recommendation.mode === 'SPIN'}}" class="wheel-wrap">
       <view class="wheel-pointer">◆</view>
-      <view class="wheel" style="{{wheelStyle}};background:{{wheelBackground}}">
+      <view class="wheel" style="{{wheelStyle}};background:{{wheelBackground}}" bindtransitionend="wheelTransitionEnd">
         <view wx:for="{{wheelSegments}}" wx:key="index" class="wheel-label" style="{{item.style}}">{{item.label}}</view>
         <view class="wheel-core"><view class="rings small"></view><text>ONE</text></view>
       </view>
     </view>
     <view class="candidate-list">
-      <view wx:for="{{recommendation.candidates}}" wx:key="id" class="candidate {{selected && selected.id === item.id ? 'selected' : ''}}" data-index="{{index}}" bindtap="tapCandidate">
+      <view wx:for="{{recommendation.candidates}}" wx:key="id" class="candidate {{selected && selected.id === item.id ? 'selected' : ''}} {{choosing ? 'disabled' : ''}}" data-index="{{index}}" bindtap="tapCandidate">
         <view class="brand-mark tiny" style="background:{{item.brandColor || '#E9DFDC'}}">{{item.brandShortName || 'ONE'}}</view>
         <view class="candidate-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.itemName}}</view><view class="muted line">{{item.reason}}</view></view>
         <view class="candidate-side"><view class="candidate-price">{{item.defaultPriceFen ? '¥' + item.defaultPriceFen / 100 : '试试'}}</view><view class="dismiss" data-index="{{index}}" catchtap="dismissCandidate">不想要</view></view>
       </view>
     </view>
     <button wx:if="{{selected}}" class="primary-btn join" bindtap="recordSelected">就选它，去记录</button>
-    <view class="sheet-actions" wx:if="{{!spinning}}"><button class="ghost-btn" bindtap="refreshRecommendation">换一批</button><button class="ghost-btn" bindtap="createRoom">群友一起选</button></view>
+    <view class="sheet-actions" wx:if="{{!spinning && !choosing}}"><button class="ghost-btn" bindtap="refreshRecommendation">换一批</button><button class="ghost-btn" bindtap="createRoom">群友一起选</button></view>
   </view>
 
   <view wx:if="{{toast}}" class="toast">{{toast}}</view>
   <view wx:if="{{deerBurst}}" class="petals"><view wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this" class="petal p{{index}}"></view></view>
+  <one-dialog id="one-dialog" />
+  <one-action-sheet id="one-action-sheet" />
 </view>

@@ -24,6 +24,10 @@
     ]
   },
   "style": "v2",
+  "usingComponents": {
+    "one-dialog": "/components/one-dialog/index",
+    "one-action-sheet": "/components/one-action-sheet/index"
+  },
   "lazyCodeLoading": "requiredComponents",
   "sitemapLocation": "sitemap.json"
 }

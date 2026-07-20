@@ -21,4 +21,5 @@
     <button class="ghost-btn" bindtap="shareRoom">邀请群友</button><button wx:if="{{room.owner}}" class="primary-btn" bindtap="closeRoom">揭晓答案</button>
   </view>
   <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+  <one-dialog id="one-dialog" />
 </view>
