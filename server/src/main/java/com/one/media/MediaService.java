@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Set;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @Service
 public class MediaService {
@@ -16,11 +17,17 @@ public class MediaService {
     private final MediaAssetRepository assets;
     private final MediaStorage storage;
     private final long maxImageBytes;
+    private final ContentSafetyGateway contentSafety;
+    private final boolean failClosed;
+    private final MeterRegistry meterRegistry;
 
-    public MediaService(MediaAssetRepository assets, MediaStorage storage, OneProperties properties) {
+    public MediaService(MediaAssetRepository assets, MediaStorage storage, ContentSafetyGateway contentSafety,
+                        OneProperties properties, MeterRegistry meterRegistry) {
         this.assets = assets;
         this.storage = storage;
         this.maxImageBytes = properties.storage().maxImageBytes();
+        this.contentSafety = contentSafety; this.failClosed = properties.contentSafety().failClosed();
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
@@ -31,7 +38,16 @@ public class MediaService {
         if (!SUPPORTED_TYPES.contains(contentType)) throw badImage("仅支持 JPG、PNG 或 WebP 图片");
         byte[] content = file.getBytes();
         MediaStorage.StoredMedia stored = storage.store(contentType, content);
-        return assets.save(MediaAsset.ready(userId, stored.storageKey(), stored.publicUrl(), contentType, content.length));
+        ContentSafetyGateway.Review review;
+        try { review = contentSafety.review(stored.publicUrl()); }
+        catch (Exception error) {
+            meterRegistry.counter("one.media.safety", "outcome", "unavailable").increment();
+            if (failClosed) { storage.delete(stored.storageKey()); throw new BusinessException("CONTENT_SAFETY_UNAVAILABLE", "图片审核暂时不可用，请稍后再试", HttpStatus.SERVICE_UNAVAILABLE); }
+            review = new ContentSafetyGateway.Review(true, "NOT_CHECKED");
+        }
+        if (!review.safe()) { meterRegistry.counter("one.media.safety", "outcome", "rejected").increment(); storage.delete(stored.storageKey()); throw new BusinessException("UNSAFE_IMAGE", "这张图片暂时不能上传，请换一张", HttpStatus.UNPROCESSABLE_ENTITY); }
+        meterRegistry.counter("one.media.safety", "outcome", "accepted").increment();
+        return assets.save(MediaAsset.ready(userId, stored.storageKey(), stored.publicUrl(), stored.thumbnailUrl(), contentType, content.length, review.label()));
     }
 
     @Transactional(readOnly = true)

@@ -68,5 +68,5 @@ public final class RecordDtos {
             Long categoryId, Long brandId, String brandName, String brandShortName,
             String brandColor, String brandLogoUrl, Long itemId, String thumbnailUrl,
             Integer actualAmountFen, Integer rating, RecordSource source,
-            String feedback, List<String> memories, Integer ordinalOfDay, String deerMessage) {}
+            String note, String feedback, List<String> memories, Integer ordinalOfDay, String deerMessage) {}
 }

@@ -5,6 +5,9 @@
         max_size 12MB
     }
 
+    respond /api/actuator/prometheus 404
+    respond /api/actuator/metrics* 404
+
     reverse_proxy /api/* server:8080 {
         health_uri /api/health
         health_interval 30s

@@ -9,4 +9,5 @@ import java.util.List;
 public interface BrandAliasRepository extends JpaRepository<BrandAlias, Long> {
     @Query("select a from BrandAlias a join fetch a.brand b where b.dimension = :dimension and b.active = true")
     List<BrandAlias> findActiveByDimension(Dimension dimension);
+    boolean existsByBrandIdAndAliasName(long brandId, String aliasName);
 }

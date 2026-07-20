@@ -8,6 +8,8 @@ import com.one.common.Dimension;
 import com.one.memory.MemorySignal;
 import com.one.memory.PreferenceMemory;
 import com.one.memory.PreferenceMemoryRepository;
+import com.one.identity.UserAccount;
+import com.one.identity.UserAccountRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -28,13 +32,17 @@ public class RecommendationService {
     private final DecisionCandidateRepository candidates;
     private final CatalogItemRepository items;
     private final PreferenceMemoryRepository memories;
+    private final UserAccountRepository users;
+    private final RecommendationFeedbackRepository feedback;
     private final ObjectMapper objectMapper;
 
     public RecommendationService(DecisionSessionRepository sessions, DecisionCandidateRepository candidates,
                                  CatalogItemRepository items, PreferenceMemoryRepository memories,
+                                 UserAccountRepository users,
+                                 RecommendationFeedbackRepository feedback,
                                  ObjectMapper objectMapper) {
         this.sessions = sessions; this.candidates = candidates; this.items = items;
-        this.memories = memories; this.objectMapper = objectMapper;
+        this.memories = memories; this.users = users; this.feedback = feedback; this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -45,17 +53,26 @@ public class RecommendationService {
         ZonedDateTime now = ZonedDateTime.now(SHANGHAI);
         TimeSlot timeSlot = TimeSlot.at(now);
         List<CatalogItem> catalog = items.findByDimensionAndActiveTrue(request.dimension());
+        Set<Long> dismissedItems = feedback.findTop100ByUserIdAndDimensionAndExpiresAtAfterOrderByCreatedAtDesc(
+                        userId, request.dimension(), now.toInstant()).stream()
+                .map(RecommendationFeedback::getItemId).collect(java.util.stream.Collectors.toSet());
+        List<CatalogItem> fresh = catalog.stream().filter(item -> !dismissedItems.contains(item.getId())).toList();
+        if (!fresh.isEmpty()) catalog = fresh;
         List<CatalogItem> affordable = catalog.stream().filter(item -> request.budgetMaxFen() == null
                 || item.getDefaultPriceFen() == null || item.getDefaultPriceFen() <= request.budgetMaxFen()).toList();
         if (!affordable.isEmpty()) catalog = affordable;
         if (catalog.isEmpty()) throw new BusinessException("NO_RECOMMENDATION", "这个分类还没有可推荐内容", HttpStatus.NOT_FOUND);
 
-        List<PreferenceMemory> memoryList = memories
-                .findTop100ByUserIdAndDimensionAndActiveTrueOrderBySourceAtDesc(userId, request.dimension());
+        UserAccount user = users.findById(userId).orElse(null);
+        boolean memoryEnabled = user != null && user.isAiEnabled();
+        Set<String> preferenceTags = preferenceTags(user, request.dimension());
+        List<PreferenceMemory> memoryList = memoryEnabled
+                ? memories.findTop100ByUserIdAndDimensionAndActiveTrueOrderBySourceAtDesc(userId, request.dimension())
+                : List.of();
         DecisionSession session = sessions.save(DecisionSession.presented(userId, request.dimension(), request.mode(),
                 timeSlot, request.budgetMaxFen(), "{}"));
         int limit = request.mode() == DecisionMode.SPIN ? Math.min(8, catalog.size()) : Math.min(3, catalog.size());
-        List<ScoredItem> selected = catalog.stream().map(item -> score(item, memoryList, timeSlot))
+        List<ScoredItem> selected = catalog.stream().map(item -> score(item, memoryList, preferenceTags, timeSlot))
                 .sorted(Comparator.comparingInt(ScoredItem::score).reversed()).limit(limit).toList();
         List<DecisionCandidate> saved = new ArrayList<>();
         for (int index = 0; index < selected.size(); index++) {
@@ -68,7 +85,9 @@ public class RecommendationService {
             saved.add(DecisionCandidate.of(session, selectedItem.item(), selectedItem.score(),
                     selectedItem.reason(), suggestionJson, selectedItem.memory(), index + 1));
         }
-        return view(session, candidates.saveAll(saved));
+        List<DecisionCandidate> persisted = candidates.saveAll(saved);
+        if (request.mode() == DecisionMode.SPIN) session.presentWinner(weightedWinner(persisted).getId());
+        return view(session, persisted);
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +104,25 @@ public class RecommendationService {
         session.choose(candidateId);
         sessions.save(session);
         return view(session, candidates.findBySessionIdOrderByPositionNoAsc(sessionId));
+    }
+
+    @Transactional
+    public RecommendationDtos.View refresh(long userId, long sessionId) throws Exception {
+        DecisionSession previous = owned(userId, sessionId);
+        return recommend(userId, new RecommendationDtos.Request(previous.getDimension(), previous.getMode(),
+                previous.getBudgetMaxFen()));
+    }
+
+    @Transactional
+    public RecommendationDtos.View dismiss(long userId, long sessionId, long candidateId,
+                                            RecommendationDtos.DismissRequest request) throws Exception {
+        DecisionSession session = owned(userId, sessionId);
+        DecisionCandidate candidate = candidates.findByIdAndSessionId(candidateId, sessionId)
+                .orElseThrow(() -> new BusinessException("CANDIDATE_NOT_FOUND", "这个选项不在本轮推荐里", HttpStatus.NOT_FOUND));
+        feedback.save(RecommendationFeedback.dismissed(userId, session.getDimension(), candidate.getItem().getId(),
+                sessionId, request == null ? null : request.reason()));
+        return recommend(userId, new RecommendationDtos.Request(session.getDimension(), session.getMode(),
+                session.getBudgetMaxFen()));
     }
 
     @Transactional(readOnly = true)
@@ -107,7 +145,8 @@ public class RecommendationService {
         sessions.save(session);
     }
 
-    private ScoredItem score(CatalogItem item, List<PreferenceMemory> memoryList, TimeSlot timeSlot) {
+    private ScoredItem score(CatalogItem item, List<PreferenceMemory> memoryList,
+                             Set<String> preferenceTags, TimeSlot timeSlot) {
         PreferenceMemory memory = memoryList.stream()
                 .filter(value -> value.getItemId() != null && value.getItemId().equals(item.getId()))
                 .findFirst().orElseGet(() -> {
@@ -119,6 +158,13 @@ public class RecommendationService {
         int score = item.getBaseWeight() + ThreadLocalRandom.current().nextInt(0, 31);
         if (item.getAttributes() != null && item.getAttributes().contains(timeSlot.name())) score += 35;
         String reason = timeReason(timeSlot);
+        String matchedTag = preferenceTags.stream()
+                .filter(tag -> matchesPreference(item, tag))
+                .findFirst().orElse(null);
+        if (matchedTag != null) {
+            score += 22;
+            reason = "你偏爱「" + matchedTag + "」，这次把它往前放了一点。";
+        }
         if (memory != null) {
             if (memory.getSignal() == MemorySignal.REPURCHASE) {
                 score += memory.getStrength();
@@ -132,6 +178,26 @@ public class RecommendationService {
             }
         }
         return new ScoredItem(item, score, reason, memory);
+    }
+
+    private boolean matchesPreference(CatalogItem item, String tag) {
+        if (tag == null || tag.isBlank()) return false;
+        return item.getAttributes() != null && item.getAttributes().contains("\"" + tag + "\"")
+                || item.getName().contains(tag)
+                || item.getCategory().getName().contains(tag)
+                || item.getBrand() != null && item.getBrand().getName().contains(tag);
+    }
+
+    private Set<String> preferenceTags(UserAccount user, Dimension dimension) {
+        if (user == null) return Set.of();
+        String json = dimension == Dimension.MEAL ? user.getMealPreferences() : user.getDrinkPreferences();
+        if (json == null || json.isBlank()) return Set.of();
+        try {
+            PreferenceTags value = objectMapper.readValue(json, PreferenceTags.class);
+            return value.tags() == null ? Set.of() : new LinkedHashSet<>(value.tags());
+        } catch (Exception ignored) {
+            return Set.of();
+        }
     }
 
     private String suggestionSuffix(PreferenceMemory memory) {
@@ -153,6 +219,16 @@ public class RecommendationService {
                 .orElseThrow(() -> new BusinessException("DECISION_NOT_FOUND", "这轮推荐不存在", HttpStatus.NOT_FOUND));
     }
 
+    private DecisionCandidate weightedWinner(List<DecisionCandidate> values) {
+        int total = values.stream().mapToInt(value -> Math.max(1, value.getScore())).sum();
+        int cursor = ThreadLocalRandom.current().nextInt(total);
+        for (DecisionCandidate value : values) {
+            cursor -= Math.max(1, value.getScore());
+            if (cursor < 0) return value;
+        }
+        return values.get(values.size() - 1);
+    }
+
     private RecommendationDtos.View view(DecisionSession session, List<DecisionCandidate> values) {
         List<RecommendationDtos.Candidate> views = values.stream().map(value -> {
             CatalogBrand brand = value.getBrand();
@@ -165,7 +241,7 @@ public class RecommendationService {
                     value.getReasonText(), value.getSuggestionJson(), value.getId().equals(session.getChosenCandidateId()));
         }).toList();
         return new RecommendationDtos.View(session.getId(), session.getDimension(), session.getMode(),
-                session.getTimeSlot(), session.getStatus(), session.getChosenCandidateId(),
+                session.getTimeSlot(), session.getStatus(), session.getWinnerCandidateId(), session.getChosenCandidateId(),
                 openingLine(session.getMode(), session.getTimeSlot()), views);
     }
 
@@ -181,4 +257,5 @@ public class RecommendationService {
     }
 
     private record ScoredItem(CatalogItem item, int score, String reason, PreferenceMemory memory) {}
+    private record PreferenceTags(List<String> tags) {}
 }

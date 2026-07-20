@@ -1,6 +1,6 @@
 <view class="page theme-{{theme}} record-page">
   <view class="orb orb-a"></view>
-  <view class="nav"><view class="back" bindtap="goBack">‹</view><view class="nav-title">记下这一口</view><view class="nav-side">ONE</view></view>
+  <view class="nav"><view class="back" bindtap="goBack">‹</view><view class="nav-title">{{pageTitle}}</view><view class="nav-side">ONE</view></view>
   <view class="photo-card glass" bindtap="choosePhoto">
     <image wx:if="{{imageUrl}}" src="{{imageUrl}}" mode="aspectFill"></image>
     <view wx:else class="photo-empty"><view class="camera-ring">⌾</view><view>拍照，让 ONE 先认一认</view><view class="muted">也可以从相册选择</view></view>
@@ -23,19 +23,23 @@
     <view class="field"><view class="label">品牌 <text>可选</text></view><input value="{{customBrandName}}" placeholder="例如 喜茶 / Manner" bindinput="inputBrand" /></view>
     <view class="field"><view class="label">吃喝了什么</view><input value="{{customItemName}}" placeholder="例如 伯牙绝弦 / 牛肉面" bindinput="inputItem" /></view>
     <view class="field"><view class="label">实际花费 <text>可选</text></view><view class="money-input"><text>¥</text><input type="digit" value="{{amountYuan}}" placeholder="0.00" bindinput="inputAmount" /></view></view>
+    <view class="field"><view class="label">留一句给未来的自己 <text>可选</text></view><textarea maxlength="300" auto-height value="{{note}}" placeholder="例如：下次记得加蛋 / 这家适合深夜" bindinput="inputNote" /></view>
   </view>
 
-  <view wx:if="{{dimension === 'MILK_TEA'}}" class="form-section">
-    <view class="section-title">甜度记忆</view>
+  <view wx:if="{{dimension === 'MILK_TEA' || dimension === 'COFFEE'}}" class="form-section drink-memory glass">
+    <view class="section-title">这一杯的细节</view>
+    <view class="sub-title first">甜度</view>
     <view class="option-row"><view wx:for="{{[{v:'NO_SUGAR',t:'无糖'},{v:'LOW',t:'少少甜'},{v:'THREE',t:'三分'},{v:'FIVE',t:'五分'},{v:'SEVEN',t:'七分'}]}}" wx:key="v" class="pill option {{sugarLevel === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectSugar">{{item.t}}</view></view>
+    <view class="sub-title">冰量 / 温度</view>
+    <view class="option-row"><view wx:for="{{[{v:'NO_ICE',t:'热 / 去冰'},{v:'LESS',t:'少冰'},{v:'NORMAL',t:'正常冰'}]}}" wx:key="v" class="pill option {{iceLevel === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectIce">{{item.t}}</view></view>
   </view>
   <view class="form-section">
     <view class="section-title">这一口怎么样？</view>
-    <view class="option-row"><view wx:for="{{[{v:'JUST_RIGHT',t:'刚刚好'},{v:'A_BIT_SWEET',t:'有点甜'},{v:'TOO_SWEET',t:'太甜了'},{v:'TOO_SALTY',t:'有点咸'},{v:'TOO_SPICY',t:'太辣'}]}}" wx:key="v" class="pill option {{tasteFeedback === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectFeedback">{{item.t}}</view></view>
+    <view class="option-row"><view wx:for="{{[{v:'JUST_RIGHT',t:'刚刚好'},{v:'A_BIT_SWEET',t:'有点甜'},{v:'TOO_SWEET',t:'太甜了'},{v:'A_BIT_SALTY',t:'有点咸'},{v:'TOO_SPICY',t:'太辣'}]}}" wx:key="v" class="pill option {{tasteFeedback === item.v ? 'on' : ''}}" data-value="{{item.v}}" bindtap="selectFeedback">{{item.t}}</view></view>
     <view class="sub-title">还会再来吗？</view>
     <view class="option-row"><view class="pill option {{repurchaseIntent === 'YES' ? 'on' : ''}}" data-value="YES" bindtap="selectRepurchase">会，记住它</view><view class="pill option {{repurchaseIntent === 'UNSURE' ? 'on' : ''}}" data-value="UNSURE" bindtap="selectRepurchase">再看看</view><view class="pill option {{repurchaseIntent === 'NO' ? 'on' : ''}}" data-value="NO" bindtap="selectRepurchase">下次不了</view></view>
   </view>
   <view class="form-section"><view class="section-title">给今天打个分</view><view class="stars"><text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="{{rating >= item ? 'lit' : ''}}" data-value="{{item}}" bindtap="selectRating">✦</text></view></view>
-  <button class="primary-btn save" loading="{{saving}}" bindtap="save">确认，收入今天</button>
+  <button class="primary-btn save" loading="{{saving}}" disabled="{{saving}}" bindtap="save">确认，收入今天</button>
   <view wx:if="{{toast}}" class="toast">{{toast}}</view>
 </view>

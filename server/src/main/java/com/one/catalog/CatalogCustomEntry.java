@@ -30,4 +30,17 @@ public class CatalogCustomEntry extends AuditedEntity {
         value.categoryId = categoryId; value.brandName = brandName; value.itemName = itemName; value.status = "PENDING";
         return value;
     }
+    public void normalize(CatalogItem target) {
+        this.normalizedItemId = target.getId();
+        this.normalizedBrandId = target.getBrand() == null ? null : target.getBrand().getId();
+        this.status = "NORMALIZED";
+    }
+    public void ignore() { this.status = "IGNORED"; }
+    public Long getId() { return id; }
+    public Dimension getDimension() { return dimension; }
+    public Long getCategoryId() { return categoryId; }
+    public String getBrandName() { return brandName; }
+    public String getItemName() { return itemName; }
+    public Long getNormalizedItemId() { return normalizedItemId; }
+    public String getStatus() { return status; }
 }

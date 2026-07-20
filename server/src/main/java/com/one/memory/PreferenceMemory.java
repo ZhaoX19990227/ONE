@@ -61,4 +61,8 @@ public class PreferenceMemory extends AuditedEntity {
     public String getDisplayText() { return displayText; }
     public Instant getSourceAt() { return sourceAt; }
     public int getStrength() { return strength; }
+    public long getSourceRecordId() { return sourceRecordId; }
+    public boolean isActive() { return active; }
+
+    public void forget() { this.active = false; }
 }

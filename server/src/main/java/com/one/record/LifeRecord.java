@@ -94,5 +94,7 @@ public class LifeRecord extends AuditedEntity {
     public String getNote() { return note; }
     public RecordSource getSource() { return source; }
 
+    public void delete() { this.recordStatus = RecordStatus.DELETED; }
+
     public record MoneyInput(Integer originalAmountFen, Integer discountAmountFen, Integer actualAmountFen) {}
 }

@@ -1,0 +1,19 @@
+<view class="page theme-{{theme}}">
+  <view class="orb orb-a"></view><view class="orb orb-b"></view>
+  <view class="nav"><view class="back" bindtap="goBack">‹</view><view class="nav-title">ONE 的记忆</view><view class="nav-side">MEMORY</view></view>
+  <view class="headline">被记住，也可以被忘记。</view>
+  <view class="muted">这里只收录会影响推荐的口味反馈。你随时拥有撤回一条记忆的权利。</view>
+  <scroll-view scroll-x class="filter-scroll">
+    <view class="filter-row"><view wx:for="{{filters}}" wx:key="value" class="pill filter {{dimension === item.value ? 'on' : ''}}" data-value="{{item.value}}" bindtap="selectFilter">{{item.label}}</view></view>
+  </scroll-view>
+  <view wx:if="{{loading}}" class="memory-loading"><view class="rings"></view><view class="muted">正在翻阅你的味觉片段…</view></view>
+  <view wx:elif="{{memories.length}}" class="memory-list">
+    <view wx:for="{{memories}}" wx:key="id" class="memory-card glass">
+      <view class="memory-mark {{item.dimension}}"></view>
+      <view class="memory-main"><view class="memory-date">{{item.displayDate}} · {{item.dimension === 'MEAL' ? '吃饭' : item.dimension === 'MILK_TEA' ? '奶茶' : '咖啡'}}</view><view class="memory-text">{{item.displayText}}</view><view wx:if="{{item.suggestionText}}" class="suggestion">{{item.suggestionText}}</view></view>
+      <view class="forget" data-id="{{item.id}}" catchtap="forget">忘记</view>
+    </view>
+  </view>
+  <view wx:else class="empty glass"><view class="rings"></view>还没有需要特别记住的口味。<br/>当你说“有点甜”或“还会再来”，记忆会出现在这里。</view>
+  <view class="memory-note">ONE 不会从「鹿一下」生成记忆，也不会把这里的内容放进分享海报。</view>
+</view>

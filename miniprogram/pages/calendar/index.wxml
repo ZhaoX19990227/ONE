@@ -7,6 +7,16 @@
     <view class="summary-line"></view><view><text class="summary-number small">¥{{totalAmountFen / 100}}</text><text class="summary-unit">本月吃喝</text></view>
     <button class="share-button" bindtap="generatePoster">生成月报 ↗</button>
   </view>
+  <view class="budget-card glass">
+    <view class="budget-head"><view><view class="budget-label">本月预算参考</view><view class="budget-copy">{{budgetText}}</view></view><view wx:if="{{monthlyBudgetFen}}" class="budget-value">{{budgetPercent}}%</view></view>
+    <view class="budget-track"><view class="budget-progress {{totalAmountFen > monthlyBudgetFen && monthlyBudgetFen ? 'over' : ''}}" style="width:{{budgetPercent}}%"></view></view>
+  </view>
+  <view wx:if="{{weekly}}" class="weekly-card glass" bindtap="generateWeeklyPoster">
+    <view class="weekly-top"><view><view class="weekly-kicker">THIS WEEK</view><view class="weekly-title">{{weekly.activeDays}} 天 · {{weekly.totalCount}} 个生活切片</view></view><view class="weekly-arrow">↗</view></view>
+    <view class="weekly-message">{{weekly.gentleMessage}}</view>
+    <view wx:if="{{weekly.easterEgg}}" class="weekly-egg">✨ {{weekly.easterEgg}}</view>
+    <view class="weekly-rhythm">最近的自然节奏 {{weekly.currentRhythmDays}} 天 · 近 90 天最长 {{weekly.longestRhythmDays}} 天</view>
+  </view>
   <view class="calendar-card glass">
     <view class="week"><text wx:for="{{['日','一','二','三','四','五','六']}}" wx:key="*this">{{item}}</text></view>
     <view class="grid">
@@ -17,7 +27,14 @@
     </view>
   </view>
   <view wx:if="{{summary}}" class="insight glass"><view class="insight-label">ONE 的观察</view><view>{{summary.insight}}</view></view>
+  <view wx:if="{{dimensionCards.length}}" class="section-title">本月构成</view>
+  <view class="dimension-stats"><view wx:for="{{dimensionCards}}" wx:key="dimension" class="dimension-stat glass"><view class="stat-dot {{item.dimension}}"></view><view class="stat-label">{{item.label}}</view><view><text class="stat-count">{{item.count}}</text><text class="muted"> 次</text></view><view class="muted stat-money">¥{{item.amountFen / 100}}</view></view></view>
+  <view wx:if="{{topBrands.length}}" class="section-title">常去的几家</view>
+  <view wx:if="{{topBrands.length}}" class="brand-rank glass"><view wx:for="{{topBrands}}" wx:key="brandName" class="brand-row"><view class="rank">0{{index + 1}}</view><view class="rank-logo" style="background:{{item.color || '#E6DAD7'}}">{{item.shortName}}</view><view class="rank-name">{{item.brandName}}</view><view class="rank-count">{{item.count}} 次</view><view class="rank-amount">¥{{item.amountFen / 100}}</view></view></view>
   <view wx:if="{{selectedDate}}" class="section-title">{{selectedDate}} · 生活切片</view>
-  <view class="record-list"><view wx:for="{{dayRecords}}" wx:key="id" class="record glass"><image wx:if="{{item.thumbnailUrl}}" src="{{item.thumbnailUrl}}" mode="aspectFill"></image><view wx:else class="mini-logo" style="background:{{item.brandColor || '#E6DAD7'}}">{{item.brandShortName || (item.type === 'PRIVATE_HABIT' ? '鹿' : 'ONE')}}</view><view class="record-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted">{{item.deerMessage || item.feedback || '被 ONE 记住'}}</view></view><text wx:if="{{item.actualAmountFen}}" class="amount">¥{{item.actualAmountFen / 100}}</text></view></view>
+  <view class="record-list"><view wx:for="{{dayRecords}}" wx:key="id" class="record glass tactile" data-index="{{index}}" bindtap="recordActions"><image wx:if="{{item.thumbnailUrl}}" src="{{item.thumbnailUrl}}" mode="aspectFill"></image><view wx:else class="mini-logo" style="background:{{item.brandColor || '#E6DAD7'}}">{{item.brandShortName || (item.type === 'PRIVATE_HABIT' ? '鹿' : 'ONE')}}</view><view class="record-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted">{{item.deerMessage || item.note || item.feedback || '被 ONE 记住'}}</view></view><text wx:if="{{item.actualAmountFen}}" class="amount">¥{{item.actualAmountFen / 100}}</text><text class="record-more">•••</text></view></view>
+  <view wx:if="{{selectedDate && !dayRecords.length}}" class="day-empty muted">这一天还没有生活切片。</view>
   <canvas canvas-id="poster" class="poster-canvas"></canvas>
+  <view wx:if="{{posterVisible}}" class="poster-mask" bindtap="closePoster"></view>
+  <view wx:if="{{posterVisible}}" class="poster-sheet glass"><view class="sheet-handle"></view><view class="poster-title">{{posterTitle}}</view><image src="{{posterPath}}" mode="widthFix"></image><view class="poster-actions"><button class="ghost-btn" bindtap="savePoster">保存相册</button><button class="primary-btn" open-type="share">发给群友</button></view></view>
 </view>

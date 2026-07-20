@@ -33,4 +33,17 @@ public class RecommendationController {
                                           @PathVariable long sessionId, @PathVariable long candidateId) {
         return service.choose(principal.userId(), sessionId, candidateId);
     }
+
+    @PostMapping("/{sessionId}/refresh")
+    public RecommendationDtos.View refresh(@AuthenticationPrincipal OnePrincipal principal,
+                                           @PathVariable long sessionId) throws Exception {
+        return service.refresh(principal.userId(), sessionId);
+    }
+
+    @PostMapping("/{sessionId}/candidates/{candidateId}/dismiss")
+    public RecommendationDtos.View dismiss(@AuthenticationPrincipal OnePrincipal principal,
+                                           @PathVariable long sessionId, @PathVariable long candidateId,
+                                           @Valid @RequestBody(required = false) RecommendationDtos.DismissRequest request) throws Exception {
+        return service.dismiss(principal.userId(), sessionId, candidateId, request);
+    }
 }

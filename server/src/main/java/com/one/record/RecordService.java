@@ -110,6 +110,14 @@ public class RecordService {
                 .map(this::detailedView).toList();
     }
 
+    @Transactional
+    public void delete(long userId, long recordId) {
+        LifeRecord record = records.findByIdAndUserIdAndRecordStatus(recordId, userId, RecordStatus.CONFIRMED)
+                .orElseThrow(() -> new BusinessException("RECORD_NOT_FOUND", "这条记录已经不存在", HttpStatus.NOT_FOUND));
+        record.delete();
+        memoryService.forgetByRecord(userId, recordId);
+    }
+
     private RecordDtos.RecordView detailedView(LifeRecord record) {
         return switch (record.getRecordType()) {
             case MEAL -> view(record, meals.findById(record.getId()).map(MealRecordDetail::getTasteFeedback).orElse(null),
@@ -141,9 +149,18 @@ public class RecordService {
                 .filter(value -> value.getDimension() == dimension && value.isActive()).orElseThrow(() ->
                         new BusinessException("BRAND_NOT_FOUND", "品牌不存在", HttpStatus.NOT_FOUND));
         String itemName = customItem.strip();
+        String brandName = clean(customBrand);
+        CatalogCustomEntry normalized = customEntries
+                .findFirstByDimensionAndBrandNameAndItemNameAndStatusAndNormalizedItemIdNotNullOrderByUpdatedAtDesc(
+                        dimension, brandName, itemName, "NORMALIZED").orElse(null);
+        if (normalized != null) {
+            CatalogItem item = items.findById(normalized.getNormalizedItemId())
+                    .filter(value -> value.getDimension() == dimension && value.isActive()).orElse(null);
+            if (item != null) return new Selection(item.getCategory(), item.getBrand(), item, null, item.getName());
+        }
         customEntries.save(CatalogCustomEntry.pending(userId, dimension, categoryId,
-                customBrand == null ? null : customBrand.strip(), itemName));
-        return new Selection(category, brand, null, brand == null ? clean(customBrand) : null, itemName);
+                brandName, itemName));
+        return new Selection(category, brand, null, brand == null ? brandName : null, itemName);
     }
 
     private LifeRecord.MoneyInput money(RecordDtos.MoneyRequest money) {
@@ -175,7 +192,7 @@ public class RecordService {
                 record.getBrandNameSnapshot(), brand == null ? null : brand.getShortName(),
                 brand == null ? null : brand.getBrandColor(), brand == null ? null : brand.getLogoUrl(),
                 item == null ? null : item.getId(), record.getThumbnailUrl(), record.getActualAmountFen(),
-                record.getRating(), record.getSource(), feedback == null ? null : feedback.name(),
+                record.getRating(), record.getSource(), record.getNote(), feedback == null ? null : feedback.name(),
                 memories.stream().map(PreferenceMemory::getDisplayText).toList(), ordinal, deerMessage);
     }
 

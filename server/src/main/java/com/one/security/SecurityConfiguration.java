@@ -22,7 +22,7 @@ public class SecurityConfiguration {
         return http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/health", "/auth/wechat", "/actuator/health/**").permitAll()
+                        .requestMatchers("/health", "/auth/wechat", "/actuator/health/**", "/actuator/prometheus").permitAll()
                         .requestMatchers(HttpMethod.GET, "/media/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/catalog/**").permitAll()
                         .anyRequest().authenticated())

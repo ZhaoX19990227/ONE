@@ -1,0 +1,24 @@
+<view class="page theme-{{theme}}">
+  <view class="orb orb-a"></view><view class="orb orb-b"></view>
+  <view class="room-nav"><view class="back" bindtap="navigateBack">‹</view><view class="room-code">ROOM · {{code}}</view><view class="share" bindtap="shareRoom">↗</view></view>
+  <view wx:if="{{room}}" class="room-head">
+    <view class="eyebrow">{{room.status === 'OPEN' ? 'NOW VOTING' : 'THE ONE'}}</view>
+    <view class="headline">{{room.title}}</view>
+    <view class="muted">{{room.ownerNickname}} 发起 · {{room.totalVotes}} 票</view>
+  </view>
+  <view wx:if="{{loading && !room}}" class="empty glass"><view class="rings"></view>正在把大家的选择放上桌…</view>
+  <view wx:if="{{room}}" class="candidate-grid">
+    <view wx:for="{{room.candidates}}" wx:key="id" class="room-card glass {{item.myVote ? 'mine' : ''}} {{item.winner ? 'winner' : ''}}" data-id="{{item.id}}" bindtap="vote">
+      <view wx:if="{{item.winner}}" class="winner-badge">今晚就它</view>
+      <view class="brand-orb" style="background:{{item.brandColor || '#E4C7C8'}}">{{item.brandShortName || 'ONE'}}</view>
+      <view class="item-name">{{item.brandName ? item.brandName + ' · ' : ''}}{{item.itemName}}</view>
+      <view class="vote-line"><view class="vote-track"><view class="vote-fill" style="width:{{room.totalVotes ? item.votes * 100 / room.totalVotes : 0}}%"></view></view><text>{{item.votes}} 票</text></view>
+      <view class="vote-state">{{item.myVote ? '你的选择 · 再点其他可改票' : room.status === 'OPEN' ? '轻点投它' : ' '}}</view>
+    </view>
+  </view>
+  <view wx:if="{{room}}" class="privacy-note">这里只有候选和票数。每个人吃过什么，仍只属于自己。</view>
+  <view wx:if="{{room && room.status === 'OPEN'}}" class="bottom-actions">
+    <button class="ghost-btn" bindtap="shareRoom">邀请群友</button><button wx:if="{{room.owner}}" class="primary-btn" bindtap="closeRoom">揭晓答案</button>
+  </view>
+  <view wx:if="{{toast}}" class="toast">{{toast}}</view>
+</view>

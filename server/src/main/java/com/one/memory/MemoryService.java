@@ -6,7 +6,11 @@ import com.one.record.MealRecordDetail;
 import com.one.record.RepurchaseIntent;
 import com.one.record.SugarLevel;
 import com.one.record.TasteFeedback;
+import com.one.common.BusinessException;
+import com.one.common.Dimension;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -33,6 +37,26 @@ public class MemoryService {
         addTasteMemory(record, detail.getTasteFeedback(), detail.getSugarLevel(), created);
         addRepurchase(record, detail.getRepurchaseIntent(), created);
         return memories.saveAll(created);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemoryDtos.View> list(long userId, Dimension dimension) {
+        List<PreferenceMemory> values = dimension == null
+                ? memories.findTop100ByUserIdAndActiveTrueOrderBySourceAtDesc(userId)
+                : memories.findTop100ByUserIdAndDimensionAndActiveTrueOrderBySourceAtDesc(userId, dimension);
+        return values.stream().map(MemoryDtos.View::from).toList();
+    }
+
+    @Transactional
+    public void forget(long userId, long memoryId) {
+        PreferenceMemory memory = memories.findByIdAndUserIdAndActiveTrue(memoryId, userId)
+                .orElseThrow(() -> new BusinessException("MEMORY_NOT_FOUND", "这条记忆已经不存在", HttpStatus.NOT_FOUND));
+        memory.forget();
+    }
+
+    public void forgetByRecord(long userId, long recordId) {
+        memories.findByUserIdAndSourceRecordIdAndActiveTrue(userId, recordId)
+                .forEach(PreferenceMemory::forget);
     }
 
     private void addTasteMemory(LifeRecord record, TasteFeedback feedback, SugarLevel sugar,

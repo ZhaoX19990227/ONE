@@ -29,4 +29,10 @@ public class AnalyticsController {
                                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return service.summary(principal.userId(), from, to);
     }
+
+    @GetMapping("/analytics/weekly")
+    public AnalyticsDtos.Weekly weekly(@AuthenticationPrincipal OnePrincipal principal,
+                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate anchor) {
+        return service.weekly(principal.userId(), anchor == null ? LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")) : anchor);
+    }
 }

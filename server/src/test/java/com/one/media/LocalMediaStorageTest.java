@@ -34,7 +34,9 @@ class LocalMediaStorageTest {
 
     private OneProperties properties() {
         return new OneProperties("test-secret-with-at-least-32-characters", Duration.ofHours(1), true,
-                "demo", "", "", new OneProperties.Qwen(false, "", "", "", "qwen3.6-flash", Duration.ofSeconds(30)),
-                new OneProperties.Storage(tempDirectory, "https://one.test/api/media/public", 10_485_760));
+                "demo", "", "", "", new OneProperties.Qwen(false, "", "", "", "qwen3.6-flash", Duration.ofSeconds(30)),
+                new OneProperties.Storage("local", tempDirectory, "https://one.test/api/media/public", 10_485_760,
+                        new OneProperties.Oss("", "", "", "", "one/media")),
+                new OneProperties.ContentSafety(false, true, "", "baselineCheck", "", ""));
     }
 }

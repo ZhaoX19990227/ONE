@@ -13,13 +13,19 @@
   </view>
   <view class="section-title">吃饭偏好</view><view class="tag-row"><view wx:for="{{mealOptions}}" wx:key="name" class="pill tag {{item.selected ? 'on' : ''}}" data-value="{{item.name}}" bindtap="toggleMeal">{{item.name}}</view></view>
   <view class="section-title">喝点什么</view><view class="tag-row"><view wx:for="{{drinkOptions}}" wx:key="name" class="pill tag {{item.selected ? 'on' : ''}}" data-value="{{item.name}}" bindtap="toggleDrink">{{item.name}}</view></view>
+  <view class="section-title">ONE 记住的你</view>
+  <view class="memory-entry glass tactile" bindtap="openMemory">
+    <view class="memory-rings"><view class="rings"></view></view>
+    <view class="memory-copy"><view>{{memoryCount ? '已经形成 ' + memoryCount + ' 条口味记忆' : '记忆还在等待第一条反馈'}}</view><view class="muted">{{memoryPreview.length ? memoryPreview[0].displayText : '说一句“有点甜”，下一次就会少甜一点。'}}</view></view>
+    <view class="memory-arrow">›</view>
+  </view>
   <view class="section-title">我的节奏</view>
   <view class="form-card glass">
     <view class="inline-field"><view><text>每月吃喝预算</text><view class="muted">只做温柔提醒，不限制你</view></view><view class="unit-input budget"><text>¥</text><input type="number" value="{{monthlyBudgetYuan}}" placeholder="—" bindinput="inputBudget"/></view></view>
-    <view class="inline-field"><view><text>让 ONE 使用口味记忆</text><view class="muted">用于推荐与甜度提示</view></view><switch checked="{{aiEnabled}}" color="#F8A4A8" bindchange="toggleAi"/></view>
-    <view class="inline-field"><view><text>显示「鹿一下」</text><view class="muted">私密记录，不参与分享</view></view><switch checked="{{privateHabitEnabled}}" color="#7FC2C9" bindchange="toggleHabit"/></view>
+    <view class="inline-field"><view><text>让推荐参考口味记忆</text><view class="muted">关闭后仍可转一转，但不会读取过往反馈</view></view><switch checked="{{aiEnabled}}" color="#F8A4A8" bindchange="toggleAi"/></view>
+    <view class="inline-field"><view><text>首页显示「鹿一下」</text><view class="muted">关闭只收起入口和今日卡片，历史仍保留</view></view><switch checked="{{privateHabitEnabled}}" color="#7FC2C9" bindchange="toggleHabit"/></view>
   </view>
-  <button class="primary-btn save" loading="{{saving}}" bindtap="save">保存我的 ONE</button>
+  <button class="primary-btn save" loading="{{saving}}" disabled="{{saving}}" bindtap="save">保存我的 ONE</button>
   <view class="privacy-note"><view class="rings"></view>你的资料、口味记忆与私密节奏默认只对自己可见。月报海报不会包含「鹿一下」数据。</view>
   <view wx:if="{{toast}}" class="toast">{{toast}}</view>
 </view>

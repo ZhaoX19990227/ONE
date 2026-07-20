@@ -23,20 +23,24 @@ public class MediaAsset {
     @Column(name = "content_type", nullable = false, length = 80) private String contentType;
     @Column(name = "size_bytes", nullable = false) private long sizeBytes;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private MediaStatus status;
+    @Column(name = "safety_status", nullable = false, length = 20) private String safetyStatus;
+    @Column(name = "safety_label", length = 80) private String safetyLabel;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
 
     protected MediaAsset() {}
 
-    public static MediaAsset ready(long userId, String storageKey, String publicUrl,
-                                   String contentType, long sizeBytes) {
+    public static MediaAsset ready(long userId, String storageKey, String publicUrl, String thumbnailUrl,
+                                   String contentType, long sizeBytes, String safetyLabel) {
         MediaAsset asset = new MediaAsset();
         asset.userId = userId;
         asset.storageKey = storageKey;
         asset.originalUrl = publicUrl;
-        asset.thumbnailUrl = publicUrl;
+        asset.thumbnailUrl = thumbnailUrl;
         asset.contentType = contentType;
         asset.sizeBytes = sizeBytes;
         asset.status = MediaStatus.READY;
+        asset.safetyStatus = "NOT_CHECKED".equals(safetyLabel) ? "NOT_CHECKED" : "PASSED";
+        asset.safetyLabel = safetyLabel;
         return asset;
     }
 

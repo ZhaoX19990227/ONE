@@ -7,7 +7,7 @@
   <view class="dimension-switch glass">
     <view class="dimension {{dimension === 'MEAL' ? 'active' : ''}}" data-value="MEAL" bindtap="selectDimension"><text class="d-icon">⌁</text><text>吃饭</text></view>
     <view class="dimension {{dimension === 'MILK_TEA' || dimension === 'COFFEE' ? 'active' : ''}}" data-value="MILK_TEA" bindtap="selectDimension"><text class="d-icon">◡</text><text>奶茶咖啡</text></view>
-    <view class="dimension {{dimension === 'PRIVATE_HABIT' ? 'active' : ''}}" data-value="PRIVATE_HABIT" bindtap="selectDimension"><text class="d-icon">♢</text><text>鹿一下</text></view>
+    <view wx:if="{{privateHabitEnabled}}" class="dimension {{dimension === 'PRIVATE_HABIT' ? 'active' : ''}}" data-value="PRIVATE_HABIT" bindtap="selectDimension"><text class="d-icon">♢</text><text>鹿一下</text></view>
   </view>
 
   <view wx:if="{{dimension === 'MILK_TEA' || dimension === 'COFFEE'}}" class="drink-toggle">
@@ -21,18 +21,18 @@
     <view class="hero-copy">{{dimension === 'PRIVATE_HABIT' ? '只属于你的节奏，不参与推荐和分享。' : '结合时间、预算和过去的口味反馈，越记录越合拍。'}}</view>
     <button class="primary-btn" data-mode="{{dimension === 'PRIVATE_HABIT' ? '' : 'SPIN'}}" bindtap="recommend" loading="{{loading}}">{{dimension === 'PRIVATE_HABIT' ? '记一只鹿' : '转一转'}}</button>
     <view class="hero-actions" wx:if="{{dimension !== 'PRIVATE_HABIT'}}">
-      <button class="ghost-btn" data-mode="SMART" bindtap="recommend">✨ 懂我推荐</button>
+      <button wx:if="{{memoryEnabled}}" class="ghost-btn" data-mode="SMART" bindtap="recommend">✨ 记忆推荐</button>
       <button class="ghost-btn" bindtap="photoRecord">⌾ 拍照记录</button>
     </view>
   </view>
 
-  <view class="section-title">今天的生活切片</view>
+  <view class="section-heading"><view class="section-title">今天的生活切片</view><view wx:if="{{records.length}}" class="today-summary">{{records.length}} 条 · ¥{{todayAmountFen / 100}}</view></view>
   <view wx:if="{{records.length}}" class="record-list">
-    <view wx:for="{{records}}" wx:key="id" class="record-row glass">
+    <view wx:for="{{records}}" wx:key="id" class="record-row glass tactile" data-index="{{index}}" bindtap="recordActions">
       <image wx:if="{{item.thumbnailUrl}}" class="thumb" src="{{item.thumbnailUrl}}" mode="aspectFill"></image>
       <view wx:else class="brand-mark" style="background:{{item.brandColor || '#E9DFDC'}}">{{item.brandShortName || (item.type === 'PRIVATE_HABIT' ? '鹿' : 'ONE')}}</view>
-      <view class="record-main"><view class="record-title">{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted line">{{item.deerMessage || item.feedback || '已收入今天的记忆'}}</view></view>
-      <view wx:if="{{item.actualAmountFen !== undefined}}" class="price">¥{{item.actualAmountFen / 100}}</view>
+      <view class="record-main"><view class="record-title">{{item.brandName ? item.brandName + ' · ' : ''}}{{item.title}}</view><view class="muted line">{{item.deerMessage || item.note || item.feedback || '已收入今天的记忆'}}</view></view>
+      <view class="record-side"><view wx:if="{{item.actualAmountFen !== undefined}}" class="price">¥{{item.actualAmountFen / 100}}</view><view class="more">•••</view></view>
     </view>
   </view>
   <view wx:else class="empty glass"><view class="rings"></view>今天还没有留下记录<br/>第一口，从不纠结开始。</view>
@@ -44,16 +44,20 @@
     <view class="sheet-title">{{recommendation.openingLine}}</view>
     <view wx:if="{{recommendation.mode === 'SPIN'}}" class="wheel-wrap">
       <view class="wheel-pointer">◆</view>
-      <view class="wheel" style="{{wheelStyle}}"><view class="wheel-core"><view class="rings small"></view><text>ONE</text></view></view>
+      <view class="wheel" style="{{wheelStyle}};background:{{wheelBackground}}">
+        <view wx:for="{{wheelSegments}}" wx:key="index" class="wheel-label" style="{{item.style}}">{{item.label}}</view>
+        <view class="wheel-core"><view class="rings small"></view><text>ONE</text></view>
+      </view>
     </view>
     <view class="candidate-list">
       <view wx:for="{{recommendation.candidates}}" wx:key="id" class="candidate {{selected && selected.id === item.id ? 'selected' : ''}}" data-index="{{index}}" bindtap="tapCandidate">
         <view class="brand-mark tiny" style="background:{{item.brandColor || '#E9DFDC'}}">{{item.brandShortName || 'ONE'}}</view>
         <view class="candidate-copy"><view>{{item.brandName ? item.brandName + ' · ' : ''}}{{item.itemName}}</view><view class="muted line">{{item.reason}}</view></view>
-        <view class="candidate-price">{{item.defaultPriceFen ? '¥' + item.defaultPriceFen / 100 : '试试'}}</view>
+        <view class="candidate-side"><view class="candidate-price">{{item.defaultPriceFen ? '¥' + item.defaultPriceFen / 100 : '试试'}}</view><view class="dismiss" data-index="{{index}}" catchtap="dismissCandidate">不想要</view></view>
       </view>
     </view>
     <button wx:if="{{selected}}" class="primary-btn join" bindtap="recordSelected">就选它，去记录</button>
+    <view class="sheet-actions" wx:if="{{!spinning}}"><button class="ghost-btn" bindtap="refreshRecommendation">换一批</button><button class="ghost-btn" bindtap="createRoom">群友一起选</button></view>
   </view>
 
   <view wx:if="{{toast}}" class="toast">{{toast}}</view>

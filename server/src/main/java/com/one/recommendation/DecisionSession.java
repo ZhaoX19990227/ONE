@@ -24,6 +24,7 @@ public class DecisionSession extends AuditedEntity {
     @Enumerated(EnumType.STRING) @Column(name = "time_slot", nullable = false, length = 20) private TimeSlot timeSlot;
     @Column(name = "budget_max_fen") private Integer budgetMaxFen;
     @Column(name = "context_json", columnDefinition = "json") private String contextJson;
+    @Column(name = "winner_candidate_id") private Long winnerCandidateId;
     @Column(name = "chosen_candidate_id") private Long chosenCandidateId;
     @Column(name = "actual_record_id") private Long actualRecordId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private DecisionStatus status;
@@ -48,6 +49,10 @@ public class DecisionSession extends AuditedEntity {
         this.status = DecisionStatus.CHOSEN;
     }
 
+    public void presentWinner(long candidateId) {
+        if (mode == DecisionMode.SPIN && status == DecisionStatus.PRESENTED) this.winnerCandidateId = candidateId;
+    }
+
     public void record(long recordId) {
         if (status != DecisionStatus.CHOSEN || chosenCandidateId == null) {
             throw new BusinessException("DECISION_NOT_CHOSEN", "请先确认本轮推荐，再完成记录", HttpStatus.CONFLICT);
@@ -62,6 +67,7 @@ public class DecisionSession extends AuditedEntity {
     public DecisionMode getMode() { return mode; }
     public TimeSlot getTimeSlot() { return timeSlot; }
     public Integer getBudgetMaxFen() { return budgetMaxFen; }
+    public Long getWinnerCandidateId() { return winnerCandidateId; }
     public Long getChosenCandidateId() { return chosenCandidateId; }
     public DecisionStatus getStatus() { return status; }
 }

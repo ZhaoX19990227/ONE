@@ -2,6 +2,7 @@ package com.one.media;
 
 import com.one.config.OneProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,6 +11,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "one.storage.type", havingValue = "local", matchIfMissing = true)
 public class LocalMediaStorage implements MediaStorage {
     private final Path root;
     private final String publicBaseUrl;
@@ -31,13 +33,17 @@ public class LocalMediaStorage implements MediaStorage {
         String key = UUID.randomUUID().toString().replace("-", "") + extension;
         Path target = safePath(key);
         Files.write(target, content, StandardOpenOption.CREATE_NEW);
-        return new StoredMedia(key, publicBaseUrl + "/" + key);
+        String url = publicBaseUrl + "/" + key;
+        return new StoredMedia(key, url, url);
     }
 
     @Override
     public byte[] read(String storageKey) throws IOException {
         return Files.readAllBytes(safePath(storageKey));
     }
+
+    @Override
+    public void delete(String storageKey) throws IOException { Files.deleteIfExists(safePath(storageKey)); }
 
     private Path safePath(String key) {
         Path target = root.resolve(key).normalize();

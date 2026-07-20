@@ -17,6 +17,9 @@ public class BrandAlias {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "brand_id") private CatalogBrand brand;
     @Column(name = "alias_name", nullable = false, length = 80) private String aliasName;
     protected BrandAlias() {}
+    public static BrandAlias of(CatalogBrand brand, String aliasName) {
+        BrandAlias alias = new BrandAlias(); alias.brand = brand; alias.aliasName = aliasName; return alias;
+    }
     public CatalogBrand getBrand() { return brand; }
     public String getAliasName() { return aliasName; }
 }

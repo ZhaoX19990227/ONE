@@ -11,6 +11,12 @@
 | GET | `/catalog/items` | 单品目录 |
 | POST | `/recommendations` | 生成三个候选和记忆提示 |
 | POST | `/recommendations/{id}/candidates/{candidateId}/choose` | 记录用户选择 |
+| POST | `/recommendations/{id}/refresh` | 换一批，不创建生活记录 |
+| POST | `/recommendations/{id}/candidates/{candidateId}/dismiss` | 短期弱负反馈（默认 14 天） |
+| POST | `/rooms` | 用当前候选创建群投票房间 |
+| GET | `/rooms/{shareCode}` | 房间聚合票数、自己的票和状态，不返回投票者 |
+| POST | `/rooms/{shareCode}/vote` | 投票或改票 |
+| POST | `/rooms/{shareCode}/close` | 发起人揭晓当前最高票 |
 | POST | `/media/images` | 上传待识别照片 |
 | POST | `/records/meals` | 新增吃饭记录并生成记忆 |
 | POST | `/records/drinks` | 新增奶茶/咖啡记录并生成记忆 |
@@ -19,9 +25,18 @@
 | POST | `/records/deer` | 新增鹿一下记录 |
 | GET | `/records/today` | 今日时间线 |
 | GET | `/records?date=YYYY-MM-DD` | 某日详情 |
+| DELETE | `/records/{recordId}` | 软删除误记记录，并停用来源于它的口味记忆 |
+| GET | `/memories?dimension=` | 查询当前生效的可解释口味记忆 |
+| DELETE | `/memories/{memoryId}` | 让推荐忘记一条口味记忆 |
 | GET | `/calendar/month?month=YYYY-MM` | 月历聚合 |
 | GET | `/analytics/summary?from=&to=` | 日/周/月汇总数据 |
+| GET | `/analytics/weekly?anchor=` | 温和周报、自然连续天数与彩蛋 |
+| GET | `/admin/catalog/custom-entries` | 待归一目录（Bearer + `X-ONE-Admin-Secret`） |
+| POST | `/admin/catalog/custom-entries/{id}/normalize` | 合并到标准产品并沉淀品牌别名 |
+| DELETE | `/admin/catalog/custom-entries/{id}` | 忽略无效自定义项 |
 
 错误统一返回稳定 `code`，客户端不得匹配中文错误文案。
 
-推荐确认和自主录入最终使用相同的记录创建服务，保证日历、统计与记忆的数据口径一致。
+推荐确认和自主录入最终使用相同的记录创建服务，保证日历、统计与记忆的数据口径一致。记录删除采用软删除，保留数据库审计链路，但立即从时间线、日历、统计和推荐记忆中排除。
+
+群房间只使用标准目录候选。响应仅包含每个候选的聚合票数、当前用户自己的选择和最终结果，不读取也不返回任何成员的个人记录。

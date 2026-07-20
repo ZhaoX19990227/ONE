@@ -1,0 +1,33 @@
+groups:
+  - name: one-production
+    rules:
+      - alert: OneServerDown
+        expr: up{job="one-server"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "ONE 后端连续 2 分钟不可用" }
+      - alert: OneHttp5xxHigh
+        expr: sum(rate(http_server_requests_seconds_count{job="one-server",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job="one-server"}[5m])), 0.001) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "ONE 近 5 分钟 5xx 比例超过 5%" }
+      - alert: OneJvmHeapHigh
+        expr: sum(jvm_memory_used_bytes{job="one-server",area="heap"}) / sum(jvm_memory_max_bytes{job="one-server",area="heap"}) > 0.85
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "ONE JVM 堆内存持续超过 85%" }
+      - alert: OneDatabasePoolWaiting
+        expr: hikaricp_connections_pending{job="one-server"} > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "ONE 数据库连接池持续存在等待" }
+      - alert: OneVisionProviderFailures
+        expr: sum(increase(one_recognition_result_total{outcome=~".*failure"}[15m])) > 5
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "ONE 图片识别 15 分钟内失败超过 5 次" }
+      - alert: OneContentSafetyUnavailable
+        expr: increase(one_media_safety_total{outcome="unavailable"}[10m]) > 2
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "ONE 图片内容安全服务连续不可用" }

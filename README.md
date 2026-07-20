@@ -18,7 +18,7 @@ ONE/
 ## 核心闭环
 
 ```text
-时间与场景 → 转盘/AI候选 → 用户选择 → 实际记录
+时间与场景 → 精确转盘/AI候选 → 个人选择或群投票 → 实际记录
 → 口味与金额反馈 → 形成可追溯记忆 → 下一次推荐调整
 ```
 
@@ -34,4 +34,4 @@ curl http://localhost:8080/api/health
 
 微信开发者工具导入 `miniprogram`。默认开启本地演示数据，接入后端时修改 `miniprogram/config/index.ts`。
 
-详细设计见 [产品范围](docs/PRODUCT.md)、[数据模型](docs/DATA_MODEL.md)、[技术架构](docs/ARCHITECTURE.md)、[接口清单](docs/API.md) 和 [部署手册](docs/DEPLOYMENT.md)。
+详细设计见 [功能现状](docs/FEATURES.md)、[产品范围](docs/PRODUCT.md)、[数据模型](docs/DATA_MODEL.md)、[技术架构](docs/ARCHITECTURE.md)、[接口清单](docs/API.md) 和 [部署手册](docs/DEPLOYMENT.md)。

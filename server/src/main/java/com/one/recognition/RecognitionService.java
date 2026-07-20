@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -37,12 +38,13 @@ public class RecognitionService {
     private final BrandAliasRepository aliases;
     private final ObjectMapper objectMapper;
     private final OneProperties properties;
+    private final MeterRegistry meterRegistry;
 
     public RecognitionService(RecognitionTaskRepository tasks, MediaService mediaService,
                               FoodVisionRecognizer recognizer, CatalogCategoryRepository categories,
                               CatalogBrandRepository brands, CatalogItemRepository items,
                               BrandAliasRepository aliases, ObjectMapper objectMapper,
-                              OneProperties properties) {
+                              OneProperties properties, MeterRegistry meterRegistry) {
         this.tasks = tasks;
         this.mediaService = mediaService;
         this.recognizer = recognizer;
@@ -52,6 +54,7 @@ public class RecognitionService {
         this.aliases = aliases;
         this.objectMapper = objectMapper;
         this.properties = properties;
+        this.meterRegistry = meterRegistry;
     }
 
     public RecognitionDtos.View recognize(long userId, RecognitionDtos.StartRequest request) {
@@ -69,21 +72,26 @@ public class RecognitionService {
                     knownCategories, knownBrands);
             if (normalized.isEmpty()) {
                 task.failed("NO_RECOGNIZABLE_ITEM");
+                count("empty");
             } else {
                 task.needConfirmation(objectMapper.writeValueAsString(normalized), confidence(result.confidence()));
+                count("success");
             }
             tasks.save(task);
             return view(task, normalized);
         } catch (BusinessException error) {
             task.failed(error.code());
+            count("business_failure");
             tasks.save(task);
             return view(task, List.of());
         } catch (IOException error) {
             task.failed("IMAGE_READ_FAILED");
+            count("image_failure");
             tasks.save(task);
             return view(task, List.of());
         } catch (Exception error) {
             task.failed("VISION_RESPONSE_INVALID");
+            count("provider_failure");
             tasks.save(task);
             return view(task, List.of());
         }
@@ -216,4 +224,5 @@ public class RecognitionService {
             throw new BusinessException("UNSUPPORTED_RECOGNITION_DIMENSION", "仅支持识别吃饭、奶茶或咖啡照片", HttpStatus.BAD_REQUEST);
         }
     }
+    private void count(String outcome) { meterRegistry.counter("one.recognition.result", "outcome", outcome).increment(); }
 }

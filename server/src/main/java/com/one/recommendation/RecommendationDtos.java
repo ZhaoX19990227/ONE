@@ -4,6 +4,7 @@ import com.one.common.Dimension;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -13,6 +14,8 @@ public final class RecommendationDtos {
     public record Request(@NotNull Dimension dimension, @NotNull DecisionMode mode,
                           @Min(0) @Max(100_000) Integer budgetMaxFen) {}
 
+    public record DismissRequest(@Size(max = 40) String reason) {}
+
     public record Candidate(long id, int position, long categoryId, String categoryName,
                             Long brandId, String brandName, String brandShortName,
                             String brandLogoUrl, String brandColor,
@@ -20,6 +23,6 @@ public final class RecommendationDtos {
                             String reason, String suggestionJson, boolean chosen) {}
 
     public record View(long sessionId, Dimension dimension, DecisionMode mode, TimeSlot timeSlot,
-                       DecisionStatus status, Long chosenCandidateId, String openingLine,
+                       DecisionStatus status, Long winnerCandidateId, Long chosenCandidateId, String openingLine,
                        List<Candidate> candidates) {}
 }

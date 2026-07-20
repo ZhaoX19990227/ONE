@@ -11,6 +11,7 @@
 
 - `decision_session`：一次转盘/AI推荐上下文和最终选择。
 - `decision_candidate`：当次三个候选、得分、理由和建议配置。
+- `recommendation_feedback`：有期限的“不想吃”弱反馈，不等同于真实生活记录。
 - `preference_memory`：从历史记录产生的喜欢、甜咸辣、分量、价格和回购记忆。
 
 `preference_memory.source_record_id` 与 `occurred_at` 让所有推荐提示可解释、可撤回，而不是只保存一个不可追溯的“偏好分”。
@@ -31,6 +32,16 @@
 - `media_asset`：原图、缩略图、内容类型和存储键。
 - `recognition_task`：识别维度、候选 JSON、置信度、用户确认结果和失败原因。
 - `catalog_custom_entry`：AI 未命中后用户输入的品牌/单品，后续可由管理员合并到正式目录。
+
+`catalog_custom_entry` 归一后保存目标品牌/产品 ID；相同品牌名+产品名的后续手动录入会自动使用标准产品。管理员合并时可同时创建 `brand_alias`，让图片识别也逐步变准。
+
+## 群选择
+
+- `group_decision_room`：分享码、发起人、分类、有效期和最终赢家。
+- `group_room_candidate`：2—8 个标准目录候选。
+- `group_room_vote`：每个用户每个房间唯一一票。
+
+客户端永远不接收 `group_room_vote.user_id` 列表，只接收候选聚合票数和当前用户自己的票。
 
 识别候选不能直接写入正式记录，必须由用户确认。确认既可以命中正式枚举，也可以保留自定义快照。
 

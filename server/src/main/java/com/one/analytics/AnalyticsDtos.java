@@ -24,4 +24,9 @@ public final class AnalyticsDtos {
                           int totalAmountFen, Integer averageAmountPerActiveDayFen,
                           List<DimensionTotal> dimensions, List<BrandTotal> topBrands,
                           List<DailyTrend> trend, String insight) {}
+
+    public record Weekly(LocalDate from, LocalDate to, int activeDays, int totalCount,
+                         int totalAmountFen, int currentRhythmDays, int longestRhythmDays,
+                         List<DayCell> days, List<DimensionTotal> dimensions,
+                         String gentleMessage, String easterEgg) {}
 }

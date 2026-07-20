@@ -34,8 +34,9 @@ spring:
       max-request-size: 10MB
 
 management:
-  endpoints.web.exposure.include: health,info,metrics
+  endpoints.web.exposure.include: health,info,metrics,prometheus
   endpoint.health.show-details: never
+  metrics.tags.application: one-server
 
 one:
   token-secret: ${ONE_TOKEN_SECRET:local-development-secret-must-be-32-chars}
@@ -44,6 +45,7 @@ one:
   demo-open-id: ${ONE_DEMO_OPEN_ID:one-demo-user}
   wechat-app-id: ${WECHAT_APP_ID:}
   wechat-app-secret: ${WECHAT_APP_SECRET:}
+  admin-secret: ${ONE_ADMIN_SECRET:}
   qwen:
     enabled: ${QWEN_ENABLED:false}
     api-key: ${DASHSCOPE_API_KEY:}
@@ -52,6 +54,20 @@ one:
     model: ${QWEN_VISION_MODEL:qwen3.6-flash}
     timeout: ${QWEN_TIMEOUT:PT30S}
   storage:
+    type: ${ONE_STORAGE_TYPE:local}
     root: ${ONE_UPLOAD_ROOT:./data/uploads}
     public-base-url: ${ONE_MEDIA_BASE_URL:http://localhost:8080/api/media/public}
     max-image-bytes: ${ONE_MAX_IMAGE_BYTES:10485760}
+    oss:
+      endpoint: ${OSS_ENDPOINT:}
+      bucket: ${OSS_BUCKET:}
+      access-key-id: ${ALIBABA_CLOUD_ACCESS_KEY_ID:}
+      access-key-secret: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:}
+      key-prefix: ${OSS_KEY_PREFIX:one/media}
+  content-safety:
+    enabled: ${CONTENT_SAFETY_ENABLED:false}
+    fail-closed: ${CONTENT_SAFETY_FAIL_CLOSED:true}
+    endpoint: ${CONTENT_SAFETY_ENDPOINT:green-cip.cn-shanghai.aliyuncs.com}
+    service: ${CONTENT_SAFETY_SERVICE:baselineCheck}
+    access-key-id: ${ALIBABA_CLOUD_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:}

@@ -83,6 +83,45 @@ public class AnalyticsService {
                 dimensions, topBrands, trend, insight(values, totalAmount, byDay.size()));
     }
 
+    @Transactional(readOnly = true)
+    public AnalyticsDtos.Weekly weekly(long userId, LocalDate anchor) {
+        LocalDate from = anchor.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        LocalDate to = from.plusDays(6);
+        List<LifeRecord> values = period(userId, from, to.plusDays(1));
+        Map<LocalDate, List<LifeRecord>> byDay = groupByDay(values);
+        List<AnalyticsDtos.DayCell> days = from.datesUntil(to.plusDays(1))
+                .map(date -> dayCell(date, byDay.getOrDefault(date, List.of()))).toList();
+        List<AnalyticsDtos.DimensionTotal> dimensions = java.util.Arrays.stream(Dimension.values())
+                .map(dimension -> {
+                    List<LifeRecord> scoped = values.stream().filter(value -> value.getRecordType() == dimension).toList();
+                    return new AnalyticsDtos.DimensionTotal(dimension, scoped.size(), amount(scoped));
+                }).toList();
+        Rhythm rhythm = rhythm(userId, anchor);
+        String message = values.isEmpty() ? "这周还很轻，不需要补作业；想留下什么时，ONE 都在。" :
+                byDay.size() <= 2 ? "几次真实的记录就很好，生活不需要每天交卷。" :
+                        "这一周的选择有了轮廓，但不用为了连续而连续。";
+        String easterEgg = rhythm.current() >= 14 ? "你和生活默契地碰了个杯 · 14 DAYS" :
+                rhythm.current() >= 7 ? "一小段温柔的连续，被 ONE 看见了 · 7 DAYS" :
+                        values.size() >= 8 ? "这周的生活切片，已经能拼成一张小电影。" : null;
+        return new AnalyticsDtos.Weekly(from, to, byDay.size(), values.size(), amount(values),
+                rhythm.current(), rhythm.longest(), days, dimensions, message, easterEgg);
+    }
+
+    private Rhythm rhythm(long userId, LocalDate anchor) {
+        LocalDate from = anchor.minusDays(89);
+        Map<LocalDate, List<LifeRecord>> byDay = groupByDay(period(userId, from, anchor.plusDays(1)));
+        java.util.Set<LocalDate> active = byDay.keySet();
+        int longest = 0; int run = 0;
+        for (LocalDate date = from; !date.isAfter(anchor); date = date.plusDays(1)) {
+            run = active.contains(date) ? run + 1 : 0;
+            longest = Math.max(longest, run);
+        }
+        LocalDate cursor = active.contains(anchor) ? anchor : anchor.minusDays(1);
+        int current = 0;
+        while (active.contains(cursor)) { current++; cursor = cursor.minusDays(1); }
+        return new Rhythm(current, longest);
+    }
+
     private List<LifeRecord> period(long userId, LocalDate from, LocalDate toExclusive) {
         Instant fromInstant = from.atStartOfDay(SHANGHAI).toInstant();
         Instant toInstant = toExclusive.atStartOfDay(SHANGHAI).toInstant();
@@ -137,4 +176,6 @@ public class AnalyticsService {
         int amount() { return amount; }
         AnalyticsDtos.BrandTotal view() { return new AnalyticsDtos.BrandTotal(name, dimension, count, amount, logoUrl, color); }
     }
+
+    private record Rhythm(int current, int longest) {}
 }

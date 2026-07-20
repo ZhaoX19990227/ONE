@@ -3,7 +3,9 @@
     "pages/home/index",
     "pages/calendar/index",
     "pages/profile/index",
-    "pages/record/index"
+    "pages/record/index",
+    "pages/memory/index",
+    "pages/room/index"
   ],
   "window": {
     "navigationStyle": "custom",

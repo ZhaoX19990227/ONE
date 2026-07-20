@@ -1,5 +1,6 @@
 import { currentTheme, ThemeName } from '../../utils/theme'
 import { request, uploadImage } from '../../utils/request'
+import { PreferenceMemory } from '../../models/types'
 
 interface Profile { nickname:string;avatarUrl?:string;heightCm?:number;weightGram?:number;gayRole?:'ONE'|'ZERO'|'VERS'|'SIDE';monthlyBudgetFen?:number;aiEnabled:boolean;privateHabitEnabled:boolean;mealPreferences:string;drinkPreferences:string;dietaryRestrictions:string }
 
@@ -7,7 +8,8 @@ Page({
   data: { theme: 'noon' as ThemeName, nickname: 'ONE群友', avatarUrl: '', heightCm: '', weightKg: '', gayRole: '',
     monthlyBudgetYuan: '', aiEnabled: true, privateHabitEnabled: true,
     mealOptions: ['清淡', '重口', '粉面', '米饭', '火锅', '快捷'].map(name => ({ name, selected: false })), selectedMealTags: [] as string[],
-    drinkOptions: ['奶香', '果茶', '纯茶', '黑咖', '奶咖', '少少甜'].map(name => ({ name, selected: false })), selectedDrinkTags: [] as string[], saving: false, toast: '' },
+    drinkOptions: ['奶香', '果茶', '纯茶', '黑咖', '奶咖', '少少甜'].map(name => ({ name, selected: false })), selectedDrinkTags: [] as string[],
+    memoryCount: 0, memoryPreview: [] as PreferenceMemory[], saving: false, toast: '' },
   onShow() {
     const tab = this.getTabBar?.(); if (tab) tab.setData({ selected: 2 })
     this.setData({ theme: currentTheme() }); this.load()
@@ -22,7 +24,14 @@ Page({
         privateHabitEnabled: profile.privateHabitEnabled, selectedMealTags: meal.tags || [], selectedDrinkTags: drink.tags || [],
         mealOptions: this.data.mealOptions.map(value => ({ ...value, selected: (meal.tags || []).includes(value.name) })),
         drinkOptions: this.data.drinkOptions.map(value => ({ ...value, selected: (drink.tags || []).includes(value.name) })) })
+      this.loadMemoryPreview()
     } catch (_) { /* 继续显示默认资料 */ }
+  },
+  async loadMemoryPreview() {
+    try {
+      const memories = await request<PreferenceMemory[]>('/memories')
+      this.setData({ memoryCount: memories.length, memoryPreview: memories.slice(0, 2) })
+    } catch (_) { this.setData({ memoryCount: 0, memoryPreview: [] }) }
   },
   parsePreferences(value: string): {tags?:string[]} { try { return JSON.parse(value || '{}') } catch (_) { return {} } },
   async chooseAvatar(event: WechatMiniprogram.CustomEvent) {
@@ -39,6 +48,7 @@ Page({
   toggleTag(field: 'selectedMealTags'|'selectedDrinkTags', optionField:'mealOptions'|'drinkOptions', value:string) { const tags = [...this.data[field]]; const index=tags.indexOf(value); index>=0?tags.splice(index,1):tags.push(value); this.setData({[field]:tags,[optionField]:this.data[optionField].map(item=>({...item,selected:tags.includes(item.name)}))}) },
   toggleAi(event: WechatMiniprogram.SwitchChange) { this.setData({ aiEnabled: event.detail.value }) },
   toggleHabit(event: WechatMiniprogram.SwitchChange) { this.setData({ privateHabitEnabled: event.detail.value }) },
+  openMemory() { wx.navigateTo({ url: '/pages/memory/index' }) },
   async save() {
     if (!this.data.nickname.trim()) { this.showToast('给自己留一个昵称'); return }
     this.setData({ saving: true })
